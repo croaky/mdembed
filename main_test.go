@@ -48,6 +48,19 @@ func TestProcessMarkdown(t *testing.T) {
 			t.Fatalf("Failed to write: %v", err)
 		}
 
+		wantContents, err := os.ReadFile("want_output.md")
+		if err != nil {
+			t.Fatalf("Failed to read want_output.md: %v", err)
+		}
+
+		gotContents, err := os.ReadFile("got_output.md")
+		if err != nil {
+			t.Fatalf("Failed to read got_output.md: %v", err)
+		}
+
+		t.Logf("want_output.md:\n%s", string(wantContents))
+		t.Logf("got_output.md:\n%s", string(gotContents))
+
 		t.Errorf("got != want\nSee %s/got_output.md", dir)
 	}
 }
