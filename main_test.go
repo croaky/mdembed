@@ -8,55 +8,46 @@ import (
 )
 
 func TestProcessMarkdown(t *testing.T) {
-	// Set up test inputs and expected outputs
-	exampleDir := "example"
+	dir := "example"
 
-	// Read the example.md file
-	exampleMDPath := filepath.Join(exampleDir, "example.md")
-	inputData, err := os.ReadFile(exampleMDPath)
+	mdPath := filepath.Join(dir, "example.md")
+	inData, err := os.ReadFile(mdPath)
 	if err != nil {
-		t.Fatalf("Failed to read input file: %v", err)
+		t.Fatalf("Failed to read: %v", err)
 	}
 
-	// Expected output, define the expected output string
-	expectedOutputPath := filepath.Join(exampleDir, "expected_output.md")
-	expectedOutputData, err := os.ReadFile(expectedOutputPath)
+	wantPath := filepath.Join(dir, "want_output.md")
+	want, err := os.ReadFile(wantPath)
 	if err != nil {
-		t.Fatalf("Failed to read expected output file: %v", err)
+		t.Fatalf("Failed to read: %v", err)
 	}
 
-	// Save the current working directory
 	originalWD, err := os.Getwd()
 	if err != nil {
-		t.Fatalf("Failed to get current working directory: %v", err)
+		t.Fatalf("Failed to get working directory: %v", err)
 	}
 	defer os.Chdir(originalWD)
 
-	// Change directory to the example directory to ensure files are found
-	if err := os.Chdir(exampleDir); err != nil {
+	if err := os.Chdir(dir); err != nil {
 		t.Fatalf("Failed to change directory: %v", err)
 	}
 
-	var outputBuffer bytes.Buffer
-	inputReader := bytes.NewReader(inputData)
+	var outBuffer bytes.Buffer
+	inReader := bytes.NewReader(inData)
 
-	// Call processMarkdown with input and output
-	err = processMarkdown(inputReader, &outputBuffer)
+	err = processMarkdown(inReader, &outBuffer)
 	if err != nil {
-		t.Fatalf("processMarkdown returned an error: %v", err)
+		t.Fatalf("processMarkdown error: %v", err)
 	}
 
-	// Get the output data
-	outputData := outputBuffer.Bytes()
+	got := outBuffer.Bytes()
 
-	// Compare the output with the expected output
-	if string(outputData) != string(expectedOutputData) {
-		// Write the actual output to a file for debugging
-		err := os.WriteFile("actual_output.md", outputData, 0644)
+	if string(got) != string(want) {
+		err := os.WriteFile("got_output.md", got, 0644)
 		if err != nil {
-			t.Fatalf("Failed to write actual output to file: %v", err)
+			t.Fatalf("Failed to write: %v", err)
 		}
 
-		t.Errorf("Output does not match expected output.\nSee actual_output.md in %s for details.", exampleDir)
+		t.Errorf("Got does not match want.\nSee %s/got_output.md", dir)
 	}
 }
