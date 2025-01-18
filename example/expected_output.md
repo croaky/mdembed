@@ -3,27 +3,48 @@
 Embed a whole file:
 
 ```rb
+# f1.rb
 puts "f1.rb"
 ```
 
 Embed multiple whole files:
 
 ```rb
+# f1.rb
 puts "f1.rb"
-puts "f2.rb"
+```
+
+```go
+// f2.go
+fmt.Println("This is f2.go")
 ```
 
 Embed subsets of a file using `beginembed` and `endembed` magic comments:
 
-```rb
-puts "f3.rb"
+```js
+// f3.js
+console.log("This is f3.js");
 ```
 
 Embed multiple whole files and multiple subsets of files:
 
 ```rb
+# f1.rb
 puts "f1.rb"
-puts "f2.rb"
-puts "f3.rb"
-puts "f4.rb"
+```
+
+```css
+/* f4.css */
+h1 {
+  color: blue;
+}
+```
+
+```html
+<!-- f5.html -->
+<style>
+  body {
+    background-color: #f0f0f0;
+  }
+</style>
 ```

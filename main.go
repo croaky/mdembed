@@ -12,7 +12,25 @@ import (
 
 var (
 	leadingWhitespaceRe = regexp.MustCompile(`(?m)(^[ \t]*)(?:[^ \t])`)
+
+	// Map of file extensions to their comment styles
+	commentStyles = map[string]CommentStyle{
+		".rb":   {LineComment: "#"},
+		".haml": {LineComment: "-#"},
+		".js":   {LineComment: "//", BlockStart: "/*", BlockEnd: "*/"},
+		".ts":   {LineComment: "//", BlockStart: "/*", BlockEnd: "*/"},
+		".go":   {LineComment: "//"},
+		".css":  {BlockStart: "/*", BlockEnd: "*/"},
+		".scss": {BlockStart: "/*", BlockEnd: "*/"},
+		".html": {BlockStart: "<!--", BlockEnd: "-->"},
+	}
 )
+
+type CommentStyle struct {
+	LineComment string // e.g., "//" or "#"
+	BlockStart  string // e.g., "/*" or "<!--"
+	BlockEnd    string // e.g., "*/" or "-->"
+}
 
 func main() {
 	if err := processMarkdown(os.Stdin, os.Stdout); err != nil {
@@ -66,21 +84,6 @@ func processEmbedCodeBlock(embedLines []string, output io.Writer) error {
 		return nil
 	}
 
-	// Determine the language based on the extension of the first filename
-	firstLine := strings.TrimSpace(embedLines[0])
-	if firstLine == "" {
-		return fmt.Errorf("embed code block is empty")
-	}
-	firstParts := strings.Fields(firstLine)
-	if len(firstParts) == 0 {
-		return fmt.Errorf("embed code block is empty")
-	}
-	firstFilename := firstParts[0]
-	ext := strings.TrimPrefix(filepath.Ext(firstFilename), ".")
-	lang := ext
-
-	var codeLines []string
-
 	for _, line := range embedLines {
 		line = strings.TrimSpace(line)
 		if line == "" {
@@ -110,9 +113,15 @@ func processEmbedCodeBlock(embedLines []string, output io.Writer) error {
 		}
 		fileContent := string(content)
 
+		ext := filepath.Ext(filename)
+		lang := strings.TrimPrefix(ext, ".")
+
+		commentStyle := getCommentStyle(ext)
+		var beginMarker, endMarker string
+
 		if useSubset {
-			beginMarker := "# beginembed"
-			endMarker := "# endembed"
+			beginMarker, endMarker = buildMarkers(commentStyle)
+
 			beginIndex := strings.Index(fileContent, beginMarker)
 			if beginIndex == -1 {
 				return fmt.Errorf("beginembed marker not found in file %s", filename)
@@ -123,49 +132,72 @@ func processEmbedCodeBlock(embedLines []string, output io.Writer) error {
 				return fmt.Errorf("endembed marker not found in file %s", filename)
 			}
 			endIndex += beginIndex
-			fileContent = strings.TrimSpace(fileContent[beginIndex:endIndex])
+			fileContent = fileContent[beginIndex:endIndex]
+
+			// Strip all leading spaces
+			fileContent = stripAllLeadingSpaces(fileContent)
 		}
 
-		// Trim trailing newlines
-		fileContent = strings.TrimRight(fileContent, "\n")
+		// Trim leading and trailing whitespace
+		fileContent = strings.TrimSpace(fileContent)
 
-		// Dedent content
-		dedentedContent := dedentContent(fileContent)
+		// Include file name as a comment at the top
+		fileNameComment := buildFileNameComment(filename, commentStyle)
 
-		// Collect the dedented content
-		codeLines = append(codeLines, dedentedContent)
+		// Output the code block
+		fmt.Fprintf(output, "```%s\n", lang)
+		fmt.Fprintln(output, fileNameComment)
+		fmt.Fprintln(output, fileContent)
+		fmt.Fprintln(output, "```")
 	}
-
-	// Output the code block with appropriate language tag
-	fmt.Fprintf(output, "```%s\n", lang)
-	for _, code := range codeLines {
-		fmt.Fprintln(output, code)
-	}
-	fmt.Fprintln(output, "```")
 
 	return nil
 }
 
-func dedentContent(content string) string {
+func stripAllLeadingSpaces(content string) string {
 	rawLines := strings.Split(content, "\n")
-	var margin string
 	var lines []string
 
-	for i, l := range rawLines {
-		if i == 0 {
-			matches := leadingWhitespaceRe.FindStringSubmatch(l)
-			if len(matches) > 1 {
-				margin = matches[1]
-			} else {
-				margin = ""
-			}
-		}
-		if margin != "" {
-			dedented := strings.TrimPrefix(l, margin)
-			lines = append(lines, dedented)
-		} else {
-			lines = append(lines, l)
-		}
+	for _, l := range rawLines {
+		lines = append(lines, strings.TrimLeft(l, " \t"))
 	}
 	return strings.Join(lines, "\n")
+}
+
+func getCommentStyle(ext string) CommentStyle {
+	if style, ok := commentStyles[ext]; ok {
+		return style
+	}
+	// Default to line comment "#"
+	return CommentStyle{LineComment: "#"}
+}
+
+func buildMarkers(style CommentStyle) (beginMarker, endMarker string) {
+	// Use LineComment if available
+	if style.LineComment != "" {
+		beginMarker = style.LineComment + " beginembed"
+		endMarker = style.LineComment + " endembed"
+		return
+	}
+	// Use BlockStart and BlockEnd
+	if style.BlockStart != "" && style.BlockEnd != "" {
+		beginMarker = style.BlockStart + " beginembed " + style.BlockEnd
+		endMarker = style.BlockStart + " endembed " + style.BlockEnd
+		return
+	}
+	// Fallback to default markers
+	beginMarker = "/* beginembed */"
+	endMarker = "/* endembed */"
+	return
+}
+
+func buildFileNameComment(filename string, style CommentStyle) string {
+	if style.LineComment != "" {
+		return style.LineComment + " " + filename
+	}
+	if style.BlockStart != "" && style.BlockEnd != "" {
+		return style.BlockStart + " " + filename + " " + style.BlockEnd
+	}
+	// Default to line comment "#"
+	return "# " + filename
 }

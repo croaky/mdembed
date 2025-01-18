@@ -10,20 +10,19 @@ Embed multiple whole files:
 
 ```embed
 f1.rb
-f2.rb
+f2.go
 ```
 
 Embed subsets of a file using `beginembed` and `endembed` magic comments:
 
 ```embed
-f3.rb subset
+f3.js subset
 ```
 
 Embed multiple whole files and multiple subsets of files:
 
 ```embed
 f1.rb
-f2.rb
-f3.rb subset
-f4.rb subset
+f4.css subset
+f5.html subset
 ```

@@ -2,7 +2,6 @@ package main
 
 import (
 	"bytes"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
@@ -51,9 +50,9 @@ func TestProcessMarkdown(t *testing.T) {
 	outputData := outputBuffer.Bytes()
 
 	// Compare the output with the expected output
-	if !bytes.Equal(outputData, expectedOutputData) {
+	if string(outputData) != string(expectedOutputData) {
 		// Write the actual output to a file for debugging
-		err := ioutil.WriteFile("actual_output.md", outputData, 0644)
+		err := os.WriteFile("actual_output.md", outputData, 0644)
 		if err != nil {
 			t.Fatalf("Failed to write actual output to file: %v", err)
 		}
