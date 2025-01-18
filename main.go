@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -14,14 +15,14 @@ var (
 )
 
 func main() {
-	if err := processMarkdown(); err != nil {
+	if err := processMarkdown(os.Stdin, os.Stdout); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		os.Exit(1)
 	}
 }
 
-func processMarkdown() error {
-	scanner := bufio.NewScanner(os.Stdin)
+func processMarkdown(input io.Reader, output io.Writer) error {
+	scanner := bufio.NewScanner(input)
 	state := "NORMAL"
 	var embedLines []string
 
@@ -34,11 +35,11 @@ func processMarkdown() error {
 				state = "EMBED_CODE_BLOCK"
 				embedLines = []string{}
 			} else {
-				fmt.Println(line)
+				fmt.Fprintln(output, line)
 			}
 		case "EMBED_CODE_BLOCK":
 			if line == "```" {
-				if err := processEmbedCodeBlock(embedLines); err != nil {
+				if err := processEmbedCodeBlock(embedLines, output); err != nil {
 					return err
 				}
 				state = "NORMAL"
@@ -59,7 +60,7 @@ func processMarkdown() error {
 	return nil
 }
 
-func processEmbedCodeBlock(embedLines []string) error {
+func processEmbedCodeBlock(embedLines []string, output io.Writer) error {
 	// Skip empty embed blocks
 	if len(embedLines) == 0 {
 		return nil
@@ -125,7 +126,7 @@ func processEmbedCodeBlock(embedLines []string) error {
 			fileContent = strings.TrimSpace(fileContent[beginIndex:endIndex])
 		}
 
-		// **Trim trailing newlines**
+		// Trim trailing newlines
 		fileContent = strings.TrimRight(fileContent, "\n")
 
 		// Dedent content
@@ -136,11 +137,11 @@ func processEmbedCodeBlock(embedLines []string) error {
 	}
 
 	// Output the code block with appropriate language tag
-	fmt.Printf("```%s\n", lang)
+	fmt.Fprintf(output, "```%s\n", lang)
 	for _, code := range codeLines {
-		fmt.Println(code)
+		fmt.Fprintln(output, code)
 	}
-	fmt.Println("```")
+	fmt.Fprintln(output, "```")
 
 	return nil
 }
