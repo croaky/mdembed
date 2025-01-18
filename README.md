@@ -16,7 +16,7 @@ cat example.md | mdembed
 
 ## Examples
 
-See [examples](https://github.com/croaky/mdembed/tree/main/example) directory.
+See [examples](https://github.com/croaky/mdembed/tree/main/examples) directory.
 
 ## So what?
 

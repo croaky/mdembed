@@ -8,7 +8,7 @@ import (
 )
 
 func TestProcessMarkdown(t *testing.T) {
-	dir := "example"
+	dir := "examples"
 
 	mdPath := filepath.Join(dir, "example.md")
 	inData, err := os.ReadFile(mdPath)
@@ -48,6 +48,6 @@ func TestProcessMarkdown(t *testing.T) {
 			t.Fatalf("Failed to write: %v", err)
 		}
 
-		t.Errorf("Got does not match want.\nSee %s/got_output.md", dir)
+		t.Errorf("got != want\nSee %s/got_output.md", dir)
 	}
 }
