@@ -1,153 +1,24 @@
 # mdembed
 
-`mdembed` is a command line tool to embed file contents in Markdown files
-in Unix pipelines.
+`mdembed` is a command line tool to embed file contents in Markdown.
 
-## Quick Start
-
-Install:
+## Install
 
 ```bash
 go install github.com/croaky/mdembed
 ```
 
-Use:
+## Use
 
 ```bash
 cat example.md | mdembed
 ```
 
-## Detailed Example
+## Examples
 
-See the [example](https://github.com/croaky/mdembed/tree/main/example)
-directory in this repo.
+See [examples](https://github.com/croaky/mdembed/tree/main/examples) directory.
 
-The directory contains these files:
-
-```
-.
-├── example.md
-├── f1.rb
-├── f2.rb
-├── f3.rb
-└── f4.rb
-```
-
-`f1.rb` contains:
-
-```ruby
-puts "f1.rb"
-```
-
-`f2.rb` contains:
-
-```ruby
-puts "f2.rb"
-```
-
-`f3.rb` contains:
-
-```ruby
-puts "not embedded"
-
-# beginembed
-puts "f3.rb"
-# endembed
-
-puts "not embedded"
-```
-
-`f4.rb` contains:
-
-```ruby
-puts "not embedded"
-
-# beginembed
-puts "f4.rb"
-# endembed
-
-puts "not embedded"
-```
-
-To embed whole files, or subsets of files,
-use fenced code blocks with an `embed` attribute.
-
-In `example.md`:
-
-    # Example
-
-    Embed a whole file:
-
-    ```embed
-    f1.rb
-    ```
-
-    Embed multiple whole files:
-
-    ```embed
-    f1.rb
-    f2.rb
-    ```
-
-    Embed subsets of a file using `beginembed` and `endembed` magic comments:
-
-    ```embed
-    f3.rb subset
-    ```
-
-    Embed multiple whole files and multiple subsets of files:
-
-    ```embed
-    f1.rb
-    f2.rb
-    f3.rb subset
-    f4.rb subset
-    ```
-
-Run:
-
-```bash
-cat example.md | mdembed
-```
-
-Output:
-
-    # Example
-
-    Embed a whole file:
-
-    ```ruby
-    puts "f1.rb"
-    ```
-
-    Embed multiple whole files:
-
-    ```ruby
-    puts "f1.rb"
-    puts "f2.rb"
-    ```
-
-    Embed subsets of a file using `beginembed` and `endembed` magic comments:
-
-    ```ruby
-    puts "f3.rb"
-    ```
-
-    Embed multiple whole files and multiple subsets of files:
-
-    ```ruby
-    puts "f1.rb"
-    puts "f2.rb"
-    puts "f3.rb"
-    puts "f4.rb"
-    ```
-
-The resulting Markdown has replaced the `embed` blocks with
-the contents of the files, or subsets of files,
-and replaced the attribute for the code fence based on the embedded file's
-file type.
-
-## So What?
+## So what?
 
 I wanted the following workflow in Vim:
 
@@ -164,8 +35,12 @@ I use [mods](https://github.com/charmbracelet/mods) for the LLM steps:
 go install github.com/charmbracelet/mods@latest
 ```
 
-So, my Unix pipeline is:
+So, my Vim config runs the following Unix pipeline in a visual split:
 
 ```bash
 cat example.md | mdembed | mods
 ```
+
+## License
+
+MIT

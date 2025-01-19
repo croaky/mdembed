@@ -2,62 +2,51 @@ package main
 
 import (
 	"bytes"
-	"io/ioutil"
 	"os"
-	"path/filepath"
 	"testing"
 )
 
-func TestProcessMarkdown(t *testing.T) {
-	// Set up test inputs and expected outputs
-	exampleDir := "example"
+func TestProcessMD(t *testing.T) {
+	dir := "examples"
 
-	// Read the example.md file
-	exampleMDPath := filepath.Join(exampleDir, "example.md")
-	inputData, err := os.ReadFile(exampleMDPath)
+	wd, err := os.Getwd()
 	if err != nil {
-		t.Fatalf("Failed to read input file: %v", err)
+		t.Fatalf("os.Getwd err: %v", err)
 	}
+	defer os.Chdir(wd)
 
-	// Expected output, define the expected output string
-	expectedOutputPath := filepath.Join(exampleDir, "expected_output.md")
-	expectedOutputData, err := os.ReadFile(expectedOutputPath)
+	err = os.Chdir(dir)
 	if err != nil {
-		t.Fatalf("Failed to read expected output file: %v", err)
+		t.Fatalf("os.Chdir err: %v", err)
 	}
 
-	// Save the current working directory
-	originalWD, err := os.Getwd()
+	in, err := os.ReadFile("input.md")
 	if err != nil {
-		t.Fatalf("Failed to get current working directory: %v", err)
-	}
-	defer os.Chdir(originalWD)
-
-	// Change directory to the example directory to ensure files are found
-	if err := os.Chdir(exampleDir); err != nil {
-		t.Fatalf("Failed to change directory: %v", err)
+		t.Fatalf("os.ReadFile err: %v", err)
 	}
 
-	var outputBuffer bytes.Buffer
-	inputReader := bytes.NewReader(inputData)
-
-	// Call processMarkdown with input and output
-	err = processMarkdown(inputReader, &outputBuffer)
+	want, err := os.ReadFile("outwant.md")
 	if err != nil {
-		t.Fatalf("processMarkdown returned an error: %v", err)
+		t.Fatalf("osReadFile err: %v", err)
 	}
 
-	// Get the output data
-	outputData := outputBuffer.Bytes()
+	var outBuf bytes.Buffer
 
-	// Compare the output with the expected output
-	if !bytes.Equal(outputData, expectedOutputData) {
-		// Write the actual output to a file for debugging
-		err := ioutil.WriteFile("actual_output.md", outputData, 0644)
-		if err != nil {
-			t.Fatalf("Failed to write actual output to file: %v", err)
-		}
+	err = processMD(bytes.NewReader(in), &outBuf)
+	if err != nil {
+		t.Fatalf("processMD err: %v", err)
+	}
 
-		t.Errorf("Output does not match expected output.\nSee actual_output.md in %s for details.", exampleDir)
+	got := outBuf.Bytes()
+	err = os.WriteFile("outgot.md", got, 0644)
+	if err != nil {
+		t.Fatalf("os.WriteFile err: %v", err)
+	}
+
+	if string(got) != string(want) {
+		t.Logf("outwant.md:\n%s", string(want))
+		t.Logf("outgot.md:\n%s", string(got))
+
+		t.Errorf("got != want\nSee %s/outgot.md", dir)
 	}
 }
