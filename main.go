@@ -19,6 +19,9 @@ var (
 		".rb":   {LineComment: "#"},
 		".scss": {BlockStart: "/*", BlockEnd: "*/"},
 		".ts":   {LineComment: "//", BlockStart: "/*", BlockEnd: "*/"},
+		".bash": {LineComment: "#"},
+		".sh":   {LineComment: "#"},
+		".lua":  {LineComment: "--"},
 	}
 )
 
@@ -53,7 +56,8 @@ func processMarkdown(input io.Reader, output io.Writer) error {
 			}
 		case "EMBED_CODE_BLOCK":
 			if line == "```" {
-				if err := processEmbedCodeBlock(embedLines, output); err != nil {
+				if err := processEmbedCodeBlock(embedLines, output); err !=
+					nil {
 					return err
 				}
 				state = "NORMAL"
@@ -90,14 +94,10 @@ func processEmbedCodeBlock(embedLines []string, output io.Writer) error {
 			continue
 		}
 		filename := parts[0]
-		useSubset := false
+		subsetName := ""
 
 		if len(parts) == 2 {
-			if parts[1] == "subset" {
-				useSubset = true
-			} else {
-				return fmt.Errorf("invalid option in embed code block: %s", line)
-			}
+			subsetName = parts[1]
 		} else if len(parts) > 2 {
 			return fmt.Errorf("invalid format in embed code block: %s", line)
 		}
@@ -112,27 +112,29 @@ func processEmbedCodeBlock(embedLines []string, output io.Writer) error {
 		lang := strings.TrimPrefix(ext, ".")
 
 		commentStyle := getCommentStyle(ext)
-		var beginMarker, endMarker string
+		fileNameComment := buildFileNameComment(filename, commentStyle)
 
-		if useSubset {
-			beginMarker, endMarker = buildMarkers(commentStyle)
+		if subsetName != "" {
+			beginMarker, endMarker := buildMarkers(commentStyle, subsetName)
 
 			beginIndex := strings.Index(fileContent, beginMarker)
 			if beginIndex == -1 {
-				return fmt.Errorf("emdo marker not found in file %s", filename)
+				return fmt.Errorf("begin marker '%s' not found in file %s",
+					beginMarker, filename)
 			}
 			beginIndex += len(beginMarker)
+
 			endIndex := strings.Index(fileContent[beginIndex:], endMarker)
 			if endIndex == -1 {
-				return fmt.Errorf("emdone marker not found in file %s", filename)
+				return fmt.Errorf("end marker '%s' not found in file %s",
+					endMarker, filename)
 			}
 			endIndex += beginIndex
+
 			fileContent = fileContent[beginIndex:endIndex]
 		}
 
 		fileContent = strings.TrimSpace(fileContent)
-
-		fileNameComment := buildFileNameComment(filename, commentStyle)
 
 		fmt.Fprintf(output, "```%s\n", lang)
 		fmt.Fprintln(output, fileNameComment)
@@ -152,23 +154,30 @@ func getCommentStyle(ext string) CommentStyle {
 	return CommentStyle{LineComment: "#"}
 }
 
-func buildMarkers(style CommentStyle) (beginMarker, endMarker string) {
-	// Use LineComment if available
+func buildMarkers(style CommentStyle, subsetName string) (string, string) {
+	subsetName = strings.TrimSpace(subsetName) // Ensure no extra spaces
+
 	if style.LineComment != "" {
-		beginMarker = style.LineComment + " emdo"
-		endMarker = style.LineComment + " emdone"
-		return
+		beginMarker := strings.TrimSpace(fmt.Sprintf("%s emdo %s", style.
+			LineComment, subsetName))
+		endMarker := strings.TrimSpace(fmt.Sprintf("%s emdone %s", style.
+			LineComment, subsetName))
+		return beginMarker, endMarker
+	} else if style.BlockStart != "" && style.BlockEnd != "" {
+		beginContent := strings.TrimSpace(fmt.Sprintf("emdo %s", subsetName))
+		endContent := strings.TrimSpace(fmt.Sprintf("emdone %s", subsetName))
+
+		beginMarker := fmt.Sprintf("%s %s %s", style.BlockStart, beginContent,
+			style.BlockEnd)
+		endMarker := fmt.Sprintf("%s %s %s", style.BlockStart, endContent,
+			style.BlockEnd)
+		return beginMarker, endMarker
 	}
-	// Use BlockStart and BlockEnd
-	if style.BlockStart != "" && style.BlockEnd != "" {
-		beginMarker = style.BlockStart + " emdo " + style.BlockEnd
-		endMarker = style.BlockStart + " emdone " + style.BlockEnd
-		return
-	}
-	// Fallback to default markers
-	beginMarker = "/* emdo */"
-	endMarker = "/* emdone */"
-	return
+
+	// Default markers
+	beginMarker := fmt.Sprintf("/* emdo %s */", subsetName)
+	endMarker := fmt.Sprintf("/* emdone %s */", subsetName)
+	return beginMarker, endMarker
 }
 
 func buildFileNameComment(filename string, style CommentStyle) string {
@@ -176,7 +185,8 @@ func buildFileNameComment(filename string, style CommentStyle) string {
 		return style.LineComment + " " + filename
 	}
 	if style.BlockStart != "" && style.BlockEnd != "" {
-		return style.BlockStart + " " + filename + " " + style.BlockEnd
+		return fmt.Sprintf("%s %s %s", style.BlockStart, filename, style.
+			BlockEnd)
 	}
 	// Default to line comment "#"
 	return "# " + filename
