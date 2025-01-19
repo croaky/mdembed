@@ -36,28 +36,33 @@ func main() {
 	}
 }
 
+// processMD reads Markdown from input and writes to output, processing embed
 func processMD(input io.Reader, output io.Writer) error {
 	scanner := bufio.NewScanner(input)
-	inEmbedBlock := false
-	var lines []string
+	inEmbedBlock := false // Flag to track if we're inside an embed block
+	var lines []string    // Collects lines within an embed block
 
 	for scanner.Scan() {
 		line := scanner.Text()
 
 		if !inEmbedBlock {
 			if line == "```embed" {
+				// Start of embed block
 				inEmbedBlock = true
 				lines = []string{}
 			} else {
+				// Write line directly to output
 				fmt.Fprintln(output, line)
 			}
 		} else {
 			if line == "```" {
+				// End of an embed block
 				if err := processEmbed(lines, output); err != nil {
 					return err
 				}
 				inEmbedBlock = false
 			} else {
+				// Collect lines in embed block
 				lines = append(lines, line)
 			}
 		}
@@ -74,6 +79,7 @@ func processMD(input io.Reader, output io.Writer) error {
 	return nil
 }
 
+// processEmbed processes lines collected within an embed block
 func processEmbed(lines []string, output io.Writer) error {
 	if len(lines) == 0 {
 		return nil
@@ -84,12 +90,14 @@ func processEmbed(lines []string, output io.Writer) error {
 		if line == "" {
 			continue
 		}
+
 		parts := strings.Fields(line)
 		if len(parts) == 0 {
 			continue
 		}
-		filename := parts[0]
-		blockName := ""
+
+		filename := parts[0] // Required filename
+		blockName := ""      // Optional block name
 
 		if len(parts) == 2 {
 			blockName = parts[1]
@@ -103,14 +111,17 @@ func processEmbed(lines []string, output io.Writer) error {
 		}
 		fileContent := string(content)
 
+		// Use file type as language for code fence
 		ext := filepath.Ext(filename)
 		lang := strings.TrimPrefix(ext, ".")
 
+		// Get comment style based on file extension
 		style, ok := styles[ext]
 		if !ok {
 			return fmt.Errorf("unsupported file type: %s", ext)
 		}
 
+		// Prepare filename comment
 		var fileName string
 		if style.LineComment != "" {
 			fileName = style.LineComment + " " + filename
@@ -118,14 +129,17 @@ func processEmbed(lines []string, output io.Writer) error {
 			fileName = fmt.Sprintf("%s %s %s", style.BlockDo, filename, style.BlockDone)
 		}
 
+		// If a block name is specified, extract block between marks
 		if blockName != "" {
 			blockName = strings.TrimSpace(blockName)
 			var doMark, doneMark string
 
 			if style.LineComment != "" {
+				// Line comment marks
 				doMark = strings.TrimSpace(fmt.Sprintf("%s emdo %s", style.LineComment, blockName))
 				doneMark = strings.TrimSpace(fmt.Sprintf("%s emdone %s", style.LineComment, blockName))
 			} else if style.BlockDo != "" && style.BlockDone != "" {
+				// Block comment marks
 				beginContent := strings.TrimSpace(fmt.Sprintf("emdo %s", blockName))
 				endContent := strings.TrimSpace(fmt.Sprintf("emdone %s", blockName))
 
@@ -133,6 +147,7 @@ func processEmbed(lines []string, output io.Writer) error {
 				doneMark = fmt.Sprintf("%s %s %s", style.BlockDo, endContent, style.BlockDone)
 			}
 
+			// Find start and end of block
 			beginIndex := strings.Index(fileContent, doMark)
 			if beginIndex == -1 {
 				return fmt.Errorf("do mark '%s' not found in file %s", doMark, filename)
@@ -145,23 +160,25 @@ func processEmbed(lines []string, output io.Writer) error {
 			}
 			endIndex += beginIndex
 
+			// Extract block content
 			fileContent = fileContent[beginIndex:endIndex]
 		}
 
+		// Clean up content
 		fileContent = strings.Trim(fileContent, "\n")
 		fileContent = dedent(fileContent)
 
+		// Write code block to output
 		fmt.Fprintf(output, "```%s\n", lang)
 		fmt.Fprintln(output, fileName)
 
+		// Avoid extra newlines in code block
 		fileContent = strings.TrimRight(fileContent, "\n")
-
-		// Print the file content without adding an extra newline
 		fmt.Fprint(output, fileContent)
-		fmt.Fprintln(output) // Add a single newline after the content
+		fmt.Fprintln(output) // Ensure newline before closing code fence
 		fmt.Fprintln(output, "```")
 
-		// Add a newline between code blocks except after the last one
+		// Add newline between multiple code blocks
 		if i < len(lines)-1 {
 			fmt.Fprintln(output)
 		}
@@ -170,14 +187,16 @@ func processEmbed(lines []string, output io.Writer) error {
 	return nil
 }
 
+// dedent removes common leading whitespace from all lines
 func dedent(s string) string {
 	lines := strings.Split(s, "\n")
 	minIndent := -1
 
+	// Find minimum indentation level
 	for _, line := range lines {
 		trimmed := strings.TrimLeft(line, " \t")
 		if trimmed == "" {
-			continue
+			continue // Skip empty or whitespace-only lines
 		}
 		indent := len(line) - len(trimmed)
 		if minIndent == -1 || indent < minIndent {
@@ -185,6 +204,7 @@ func dedent(s string) string {
 		}
 	}
 
+	// Remove minimum indentation from each line
 	if minIndent > 0 {
 		for i, line := range lines {
 			if len(line) >= minIndent {
