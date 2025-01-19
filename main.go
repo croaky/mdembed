@@ -20,6 +20,7 @@ var styles = map[string]Style{
 	".rb":   {LineComment: "#"},
 	".scss": {BlockDo: "/*", BlockDone: "*/"},
 	".sh":   {LineComment: "#"},
+	".sql":  {LineComment: "--"},
 	".ts":   {LineComment: "//", BlockDo: "/*", BlockDone: "*/"},
 }
 

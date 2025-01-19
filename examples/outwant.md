@@ -60,3 +60,11 @@ h1 {
   <li>2</li>
 </ul>
 ```
+
+```sql
+-- f6.sql
+SELECT
+  *
+FROM
+  users;
+```
