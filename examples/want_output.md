@@ -15,6 +15,7 @@ puts "f1.rb"
 ```
 
 ```go
+// f2.go
 package main
 
 import "fmt"

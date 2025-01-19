@@ -9,21 +9,19 @@ import (
 	"strings"
 )
 
-var (
-	commentStyles = map[string]CommentStyle{
-		".css":  {BlockStart: "/*", BlockEnd: "*/"},
-		".go":   {LineComment: "//"},
-		".haml": {LineComment: "-#"},
-		".html": {BlockStart: "<!--", BlockEnd: "-->"},
-		".js":   {LineComment: "//", BlockStart: "/*", BlockEnd: "*/"},
-		".rb":   {LineComment: "#"},
-		".scss": {BlockStart: "/*", BlockEnd: "*/"},
-		".ts":   {LineComment: "//", BlockStart: "/*", BlockEnd: "*/"},
-		".bash": {LineComment: "#"},
-		".sh":   {LineComment: "#"},
-		".lua":  {LineComment: "--"},
-	}
-)
+var commentStyles = map[string]CommentStyle{
+	".bash": {LineComment: "#"},
+	".css":  {BlockStart: "/*", BlockEnd: "*/"},
+	".go":   {LineComment: "//"},
+	".haml": {LineComment: "-#"},
+	".html": {BlockStart: "<!--", BlockEnd: "-->"},
+	".js":   {LineComment: "//", BlockStart: "/*", BlockEnd: "*/"},
+	".lua":  {LineComment: "--"},
+	".rb":   {LineComment: "#"},
+	".scss": {BlockStart: "/*", BlockEnd: "*/"},
+	".sh":   {LineComment: "#"},
+	".ts":   {LineComment: "//", BlockStart: "/*", BlockEnd: "*/"},
+}
 
 type CommentStyle struct {
 	LineComment string
@@ -32,42 +30,40 @@ type CommentStyle struct {
 }
 
 func main() {
-	if err := processMarkdown(os.Stdin, os.Stdout); err != nil {
+	if err := processMD(os.Stdin, os.Stdout); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		os.Exit(1)
 	}
 }
 
-func processMarkdown(input io.Reader, output io.Writer) error {
+func processMD(input io.Reader, output io.Writer) error {
 	scanner := bufio.NewScanner(input)
-	state := "NORMAL"
-	var embedLines []string
+	inEmbedBlock := false
+	var lines []string
 
 	for scanner.Scan() {
 		line := scanner.Text()
 
-		switch state {
-		case "NORMAL":
+		if !inEmbedBlock {
 			if line == "```embed" {
-				state = "EMBED_CODE_BLOCK"
-				embedLines = []string{}
+				inEmbedBlock = true
+				lines = []string{}
 			} else {
 				fmt.Fprintln(output, line)
 			}
-		case "EMBED_CODE_BLOCK":
+		} else {
 			if line == "```" {
-				if err := processEmbedCodeBlock(embedLines, output); err !=
-					nil {
+				if err := processEmbed(lines, output); err != nil {
 					return err
 				}
-				state = "NORMAL"
+				inEmbedBlock = false
 			} else {
-				embedLines = append(embedLines, line)
+				lines = append(lines, line)
 			}
 		}
 	}
 
-	if state == "EMBED_CODE_BLOCK" {
+	if inEmbedBlock {
 		return fmt.Errorf("unterminated ```embed code block")
 	}
 
@@ -78,13 +74,13 @@ func processMarkdown(input io.Reader, output io.Writer) error {
 	return nil
 }
 
-func processEmbedCodeBlock(embedLines []string, output io.Writer) error {
+func processEmbed(lines []string, output io.Writer) error {
 	// Skip empty embed blocks
-	if len(embedLines) == 0 {
+	if len(lines) == 0 {
 		return nil
 	}
 
-	for _, line := range embedLines {
+	for i, line := range lines {
 		line = strings.TrimSpace(line)
 		if line == "" {
 			continue // Skip empty lines
@@ -94,10 +90,10 @@ func processEmbedCodeBlock(embedLines []string, output io.Writer) error {
 			continue
 		}
 		filename := parts[0]
-		subsetName := ""
+		blockName := ""
 
 		if len(parts) == 2 {
-			subsetName = parts[1]
+			blockName = parts[1]
 		} else if len(parts) > 2 {
 			return fmt.Errorf("invalid format in embed code block: %s", line)
 		}
@@ -111,23 +107,48 @@ func processEmbedCodeBlock(embedLines []string, output io.Writer) error {
 		ext := filepath.Ext(filename)
 		lang := strings.TrimPrefix(ext, ".")
 
-		commentStyle := getCommentStyle(ext)
-		fileNameComment := buildFileNameComment(filename, commentStyle)
+		style, ok := commentStyles[ext]
+		if !ok {
+			return fmt.Errorf("unsupported file type: %s", ext)
+		}
 
-		if subsetName != "" {
-			beginMarker, endMarker := buildMarkers(commentStyle, subsetName)
+		var fileNameComment string
+		if style.LineComment != "" {
+			fileNameComment = style.LineComment + " " + filename
+		} else if style.BlockStart != "" && style.BlockEnd != "" {
+			fileNameComment = fmt.Sprintf("%s %s %s", style.BlockStart, filename, style.BlockEnd)
+		} else {
+			fileNameComment = "# " + filename
+		}
+
+		if blockName != "" {
+			blockName = strings.TrimSpace(blockName)
+			var beginMarker, endMarker string
+
+			if style.LineComment != "" {
+				beginMarker = strings.TrimSpace(fmt.Sprintf("%s emdo %s", style.LineComment, blockName))
+				endMarker = strings.TrimSpace(fmt.Sprintf("%s emdone %s", style.LineComment, blockName))
+			} else if style.BlockStart != "" && style.BlockEnd != "" {
+				beginContent := strings.TrimSpace(fmt.Sprintf("emdo %s", blockName))
+				endContent := strings.TrimSpace(fmt.Sprintf("emdone %s", blockName))
+
+				beginMarker = fmt.Sprintf("%s %s %s", style.BlockStart, beginContent, style.BlockEnd)
+				endMarker = fmt.Sprintf("%s %s %s", style.BlockStart, endContent, style.BlockEnd)
+			} else {
+				// Default markers
+				beginMarker = fmt.Sprintf("/* emdo %s */", blockName)
+				endMarker = fmt.Sprintf("/* emdone %s */", blockName)
+			}
 
 			beginIndex := strings.Index(fileContent, beginMarker)
 			if beginIndex == -1 {
-				return fmt.Errorf("begin marker '%s' not found in file %s",
-					beginMarker, filename)
+				return fmt.Errorf("begin marker '%s' not found in file %s", beginMarker, filename)
 			}
 			beginIndex += len(beginMarker)
 
 			endIndex := strings.Index(fileContent[beginIndex:], endMarker)
 			if endIndex == -1 {
-				return fmt.Errorf("end marker '%s' not found in file %s",
-					endMarker, filename)
+				return fmt.Errorf("end marker '%s' not found in file %s", endMarker, filename)
 			}
 			endIndex += beginIndex
 
@@ -140,54 +161,12 @@ func processEmbedCodeBlock(embedLines []string, output io.Writer) error {
 		fmt.Fprintln(output, fileNameComment)
 		fmt.Fprintln(output, fileContent)
 		fmt.Fprintln(output, "```")
+
+		// Add a newline between code blocks except after the last one
+		if i < len(lines)-1 {
+			fmt.Fprintln(output)
+		}
 	}
 
 	return nil
-}
-
-func getCommentStyle(ext string) CommentStyle {
-	if style, ok := commentStyles[ext]; ok {
-		return style
-	}
-
-	// Default to line comment "#"
-	return CommentStyle{LineComment: "#"}
-}
-
-func buildMarkers(style CommentStyle, subsetName string) (string, string) {
-	subsetName = strings.TrimSpace(subsetName) // Ensure no extra spaces
-
-	if style.LineComment != "" {
-		beginMarker := strings.TrimSpace(fmt.Sprintf("%s emdo %s", style.
-			LineComment, subsetName))
-		endMarker := strings.TrimSpace(fmt.Sprintf("%s emdone %s", style.
-			LineComment, subsetName))
-		return beginMarker, endMarker
-	} else if style.BlockStart != "" && style.BlockEnd != "" {
-		beginContent := strings.TrimSpace(fmt.Sprintf("emdo %s", subsetName))
-		endContent := strings.TrimSpace(fmt.Sprintf("emdone %s", subsetName))
-
-		beginMarker := fmt.Sprintf("%s %s %s", style.BlockStart, beginContent,
-			style.BlockEnd)
-		endMarker := fmt.Sprintf("%s %s %s", style.BlockStart, endContent,
-			style.BlockEnd)
-		return beginMarker, endMarker
-	}
-
-	// Default markers
-	beginMarker := fmt.Sprintf("/* emdo %s */", subsetName)
-	endMarker := fmt.Sprintf("/* emdone %s */", subsetName)
-	return beginMarker, endMarker
-}
-
-func buildFileNameComment(filename string, style CommentStyle) string {
-	if style.LineComment != "" {
-		return style.LineComment + " " + filename
-	}
-	if style.BlockStart != "" && style.BlockEnd != "" {
-		return fmt.Sprintf("%s %s %s", style.BlockStart, filename, style.
-			BlockEnd)
-	}
-	// Default to line comment "#"
-	return "# " + filename
 }

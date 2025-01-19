@@ -13,6 +13,7 @@ Embed multiple whole files:
 # f1.rb
 puts "f1.rb"
 ```
+
 ```go
 // f2.go
 package main
@@ -39,16 +40,19 @@ Embed multiple whole files and multiple lines within files:
 # f1.rb
 puts "f1.rb"
 ```
+
 ```css
 /* f4.css */
 h1 {
   color: blue;
 }
 ```
+
 ```html
 <!-- f5.html -->
 <h1>h1</h1>
 ```
+
 ```html
 <!-- f5.html -->
 <ul>

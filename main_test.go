@@ -7,7 +7,7 @@ import (
 	"testing"
 )
 
-func TestProcessMarkdown(t *testing.T) {
+func TestProcessMD(t *testing.T) {
 	dir := "examples"
 
 	inPath := filepath.Join(dir, "input.md")
@@ -35,7 +35,7 @@ func TestProcessMarkdown(t *testing.T) {
 	var outBuffer bytes.Buffer
 	inReader := bytes.NewReader(inData)
 
-	err = processMarkdown(inReader, &outBuffer)
+	err = processMD(inReader, &outBuffer)
 	if err != nil {
 		t.Fatalf("processMarkdown error: %v", err)
 	}
