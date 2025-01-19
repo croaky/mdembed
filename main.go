@@ -9,24 +9,24 @@ import (
 	"strings"
 )
 
-var commentStyles = map[string]CommentStyle{
+var styles = map[string]Style{
 	".bash": {LineComment: "#"},
-	".css":  {BlockStart: "/*", BlockEnd: "*/"},
+	".css":  {BlockDo: "/*", BlockDone: "*/"},
 	".go":   {LineComment: "//"},
 	".haml": {LineComment: "-#"},
-	".html": {BlockStart: "<!--", BlockEnd: "-->"},
-	".js":   {LineComment: "//", BlockStart: "/*", BlockEnd: "*/"},
+	".html": {BlockDo: "<!--", BlockDone: "-->"},
+	".js":   {LineComment: "//", BlockDo: "/*", BlockDone: "*/"},
 	".lua":  {LineComment: "--"},
 	".rb":   {LineComment: "#"},
-	".scss": {BlockStart: "/*", BlockEnd: "*/"},
+	".scss": {BlockDo: "/*", BlockDone: "*/"},
 	".sh":   {LineComment: "#"},
-	".ts":   {LineComment: "//", BlockStart: "/*", BlockEnd: "*/"},
+	".ts":   {LineComment: "//", BlockDo: "/*", BlockDone: "*/"},
 }
 
-type CommentStyle struct {
+type Style struct {
 	LineComment string
-	BlockStart  string
-	BlockEnd    string
+	BlockDo     string
+	BlockDone   string
 }
 
 func main() {
@@ -75,7 +75,6 @@ func processMD(input io.Reader, output io.Writer) error {
 }
 
 func processEmbed(lines []string, output io.Writer) error {
-	// Skip empty embed blocks
 	if len(lines) == 0 {
 		return nil
 	}
@@ -83,7 +82,7 @@ func processEmbed(lines []string, output io.Writer) error {
 	for i, line := range lines {
 		line = strings.TrimSpace(line)
 		if line == "" {
-			continue // Skip empty lines
+			continue
 		}
 		parts := strings.Fields(line)
 		if len(parts) == 0 {
@@ -107,70 +106,59 @@ func processEmbed(lines []string, output io.Writer) error {
 		ext := filepath.Ext(filename)
 		lang := strings.TrimPrefix(ext, ".")
 
-		style, ok := commentStyles[ext]
+		style, ok := styles[ext]
 		if !ok {
 			return fmt.Errorf("unsupported file type: %s", ext)
 		}
 
-		var fileNameComment string
+		var fileName string
 		if style.LineComment != "" {
-			fileNameComment = style.LineComment + " " + filename
-		} else if style.BlockStart != "" && style.BlockEnd != "" {
-			fileNameComment = fmt.Sprintf("%s %s %s", style.BlockStart, filename, style.BlockEnd)
-		} else {
-			// Should not reach here since unsupported styles should have been caught
-			return fmt.Errorf("unsupported comment style for file type: %s", ext)
+			fileName = style.LineComment + " " + filename
+		} else if style.BlockDo != "" && style.BlockDone != "" {
+			fileName = fmt.Sprintf("%s %s %s", style.BlockDo, filename, style.BlockDone)
 		}
 
 		if blockName != "" {
 			blockName = strings.TrimSpace(blockName)
-			var beginMarker, endMarker string
+			var doMark, doneMark string
 
 			if style.LineComment != "" {
-				beginMarker = strings.TrimSpace(fmt.Sprintf("%s emdo %s", style.LineComment, blockName))
-				endMarker = strings.TrimSpace(fmt.Sprintf("%s emdone %s", style.LineComment, blockName))
-			} else if style.BlockStart != "" && style.BlockEnd != "" {
+				doMark = strings.TrimSpace(fmt.Sprintf("%s emdo %s", style.LineComment, blockName))
+				doneMark = strings.TrimSpace(fmt.Sprintf("%s emdone %s", style.LineComment, blockName))
+			} else if style.BlockDo != "" && style.BlockDone != "" {
 				beginContent := strings.TrimSpace(fmt.Sprintf("emdo %s", blockName))
 				endContent := strings.TrimSpace(fmt.Sprintf("emdone %s", blockName))
 
-				beginMarker = fmt.Sprintf("%s %s %s", style.BlockStart, beginContent, style.BlockEnd)
-				endMarker = fmt.Sprintf("%s %s %s", style.BlockStart, endContent, style.BlockEnd)
-			} else {
-				// Should not reach here since unsupported styles should have been caught
-				return fmt.Errorf("unsupported comment style for file type: %s", ext)
+				doMark = fmt.Sprintf("%s %s %s", style.BlockDo, beginContent, style.BlockDone)
+				doneMark = fmt.Sprintf("%s %s %s", style.BlockDo, endContent, style.BlockDone)
 			}
 
-			beginIndex := strings.Index(fileContent, beginMarker)
+			beginIndex := strings.Index(fileContent, doMark)
 			if beginIndex == -1 {
-				return fmt.Errorf("begin marker '%s' not found in file %s", beginMarker, filename)
+				return fmt.Errorf("do mark '%s' not found in file %s", doMark, filename)
 			}
-			beginIndex += len(beginMarker)
+			beginIndex += len(doMark)
 
-			endIndex := strings.Index(fileContent[beginIndex:], endMarker)
+			endIndex := strings.Index(fileContent[beginIndex:], doneMark)
 			if endIndex == -1 {
-				return fmt.Errorf("end marker '%s' not found in file %s", endMarker, filename)
+				return fmt.Errorf("done mark '%s' not found in file %s", doneMark, filename)
 			}
 			endIndex += beginIndex
 
 			fileContent = fileContent[beginIndex:endIndex]
 		}
 
-		// Trim leading and trailing blank lines
 		fileContent = strings.Trim(fileContent, "\n")
-
-		// Dedent the file content
 		fileContent = dedent(fileContent)
 
 		fmt.Fprintf(output, "```%s\n", lang)
-		fmt.Fprintln(output, fileNameComment)
+		fmt.Fprintln(output, fileName)
 
-		// Trim any trailing newlines to prevent extra blank lines
 		fileContent = strings.TrimRight(fileContent, "\n")
 
 		// Print the file content without adding an extra newline
 		fmt.Fprint(output, fileContent)
 		fmt.Fprintln(output) // Add a single newline after the content
-
 		fmt.Fprintln(output, "```")
 
 		// Add a newline between code blocks except after the last one
