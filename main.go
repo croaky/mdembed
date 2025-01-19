@@ -118,7 +118,8 @@ func processEmbed(lines []string, output io.Writer) error {
 		} else if style.BlockStart != "" && style.BlockEnd != "" {
 			fileNameComment = fmt.Sprintf("%s %s %s", style.BlockStart, filename, style.BlockEnd)
 		} else {
-			fileNameComment = "# " + filename
+			// Should not reach here since unsupported styles should have been caught
+			return fmt.Errorf("unsupported comment style for file type: %s", ext)
 		}
 
 		if blockName != "" {
@@ -135,9 +136,8 @@ func processEmbed(lines []string, output io.Writer) error {
 				beginMarker = fmt.Sprintf("%s %s %s", style.BlockStart, beginContent, style.BlockEnd)
 				endMarker = fmt.Sprintf("%s %s %s", style.BlockStart, endContent, style.BlockEnd)
 			} else {
-				// Default markers
-				beginMarker = fmt.Sprintf("/* emdo %s */", blockName)
-				endMarker = fmt.Sprintf("/* emdone %s */", blockName)
+				// Should not reach here since unsupported styles should have been caught
+				return fmt.Errorf("unsupported comment style for file type: %s", ext)
 			}
 
 			beginIndex := strings.Index(fileContent, beginMarker)
@@ -155,11 +155,22 @@ func processEmbed(lines []string, output io.Writer) error {
 			fileContent = fileContent[beginIndex:endIndex]
 		}
 
-		fileContent = strings.TrimSpace(fileContent)
+		// Trim leading and trailing blank lines
+		fileContent = strings.Trim(fileContent, "\n")
+
+		// Dedent the file content
+		fileContent = dedent(fileContent)
 
 		fmt.Fprintf(output, "```%s\n", lang)
 		fmt.Fprintln(output, fileNameComment)
-		fmt.Fprintln(output, fileContent)
+
+		// Trim any trailing newlines to prevent extra blank lines
+		fileContent = strings.TrimRight(fileContent, "\n")
+
+		// Print the file content without adding an extra newline
+		fmt.Fprint(output, fileContent)
+		fmt.Fprintln(output) // Add a single newline after the content
+
 		fmt.Fprintln(output, "```")
 
 		// Add a newline between code blocks except after the last one
@@ -169,4 +180,30 @@ func processEmbed(lines []string, output io.Writer) error {
 	}
 
 	return nil
+}
+
+func dedent(s string) string {
+	lines := strings.Split(s, "\n")
+	minIndent := -1
+
+	for _, line := range lines {
+		trimmed := strings.TrimLeft(line, " \t")
+		if trimmed == "" {
+			continue
+		}
+		indent := len(line) - len(trimmed)
+		if minIndent == -1 || indent < minIndent {
+			minIndent = indent
+		}
+	}
+
+	if minIndent > 0 {
+		for i, line := range lines {
+			if len(line) >= minIndent {
+				lines[i] = line[minIndent:]
+			}
+		}
+	}
+
+	return strings.Join(lines, "\n")
 }

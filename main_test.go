@@ -3,54 +3,50 @@ package main
 import (
 	"bytes"
 	"os"
-	"path/filepath"
 	"testing"
 )
 
 func TestProcessMD(t *testing.T) {
 	dir := "examples"
 
-	inPath := filepath.Join(dir, "input.md")
-	inData, err := os.ReadFile(inPath)
+	wd, err := os.Getwd()
 	if err != nil {
-		t.Fatalf("Failed to read: %v", err)
+		t.Fatalf("os.Getwd err: %v", err)
 	}
+	defer os.Chdir(wd)
 
-	wantPath := filepath.Join(dir, "want_output.md")
-	want, err := os.ReadFile(wantPath)
+	err = os.Chdir(dir)
 	if err != nil {
-		t.Fatalf("Failed to read: %v", err)
+		t.Fatalf("os.Chdir err: %v", err)
 	}
 
-	originalWD, err := os.Getwd()
+	in, err := os.ReadFile("input.md")
 	if err != nil {
-		t.Fatalf("Failed to get working directory: %v", err)
-	}
-	defer os.Chdir(originalWD)
-
-	if err := os.Chdir(dir); err != nil {
-		t.Fatalf("Failed to change directory: %v", err)
+		t.Fatalf("os.ReadFile err: %v", err)
 	}
 
-	var outBuffer bytes.Buffer
-	inReader := bytes.NewReader(inData)
-
-	err = processMD(inReader, &outBuffer)
+	want, err := os.ReadFile("outwant.md")
 	if err != nil {
-		t.Fatalf("processMarkdown error: %v", err)
+		t.Fatalf("osReadFile err: %v", err)
 	}
 
-	got := outBuffer.Bytes()
+	var outBuf bytes.Buffer
+
+	err = processMD(bytes.NewReader(in), &outBuf)
+	if err != nil {
+		t.Fatalf("processMD err: %v", err)
+	}
+
+	got := outBuf.Bytes()
+	err = os.WriteFile("outgot.md", got, 0644)
+	if err != nil {
+		t.Fatalf("os.WriteFile err: %v", err)
+	}
 
 	if string(got) != string(want) {
-		err := os.WriteFile("got_output.md", got, 0644)
-		if err != nil {
-			t.Fatalf("Failed to write: %v", err)
-		}
+		t.Logf("outwant.md:\n%s", string(want))
+		t.Logf("outgot.md:\n%s", string(got))
 
-		t.Logf("want_output.md:\n%s", string(want))
-		t.Logf("got_output.md:\n%s", string(got))
-
-		t.Errorf("got != want\nSee %s/got_output.md", dir)
+		t.Errorf("got != want\nSee %s/outgot.md", dir)
 	}
 }
