@@ -1,7 +1,7 @@
 console.log("Not embedded");
 
-// beginembed
-console.log("This is f3.js");
-// endembed
+// emdo log
+console.log("f3.js");
+// emdone log
 
 console.log("Not embedded");

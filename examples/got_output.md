@@ -20,11 +20,13 @@ package main
 import "fmt"
 
 func main() {
-	fmt.Println("Not embedded")
-	// beginembed
-	fmt.Println("This is f2.go")
-	// endembed
-	fmt.Println("Not embedded")
+	// mdbeg
+	fmt.Println("f2.go")
+	// mdend
+
+	// emstart
+	fmt.Println("f2.go")
+	// emstop
 }
 ```
 
@@ -44,14 +46,14 @@ puts "f1.rb"
 ```css
 /* f4.css */
 h1 {
-color: blue;
+  color: blue;
 }
 ```
 ```html
 <!-- f5.html -->
 <style>
-body {
-background-color: #f0f0f0;
-}
-</style>
+      body {
+        background-color: #f0f0f0;
+      }
+    </style>
 ```

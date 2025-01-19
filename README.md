@@ -35,7 +35,7 @@ I use [mods](https://github.com/charmbracelet/mods) for the LLM steps:
 go install github.com/charmbracelet/mods@latest
 ```
 
-So, my Unix pipeline is:
+So, my Vim config runs the following Unix pipeline in a visual split:
 
 ```bash
 cat example.md | mdembed | mods

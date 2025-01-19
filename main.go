@@ -6,30 +6,26 @@ import (
 	"io"
 	"os"
 	"path/filepath"
-	"regexp"
 	"strings"
 )
 
 var (
-	leadingWhitespaceRe = regexp.MustCompile(`(?m)(^[ \t]*)(?:[^ \t])`)
-
-	// Map of file extensions to their comment styles
 	commentStyles = map[string]CommentStyle{
-		".rb":   {LineComment: "#"},
-		".haml": {LineComment: "-#"},
-		".js":   {LineComment: "//", BlockStart: "/*", BlockEnd: "*/"},
-		".ts":   {LineComment: "//", BlockStart: "/*", BlockEnd: "*/"},
-		".go":   {LineComment: "//"},
 		".css":  {BlockStart: "/*", BlockEnd: "*/"},
-		".scss": {BlockStart: "/*", BlockEnd: "*/"},
+		".go":   {LineComment: "//"},
+		".haml": {LineComment: "-#"},
 		".html": {BlockStart: "<!--", BlockEnd: "-->"},
+		".js":   {LineComment: "//", BlockStart: "/*", BlockEnd: "*/"},
+		".rb":   {LineComment: "#"},
+		".scss": {BlockStart: "/*", BlockEnd: "*/"},
+		".ts":   {LineComment: "//", BlockStart: "/*", BlockEnd: "*/"},
 	}
 )
 
 type CommentStyle struct {
-	LineComment string // e.g., "//" or "#"
-	BlockStart  string // e.g., "/*" or "<!--"
-	BlockEnd    string // e.g., "*/" or "-->"
+	LineComment string
+	BlockStart  string
+	BlockEnd    string
 }
 
 func main() {
@@ -106,7 +102,6 @@ func processEmbedCodeBlock(embedLines []string, output io.Writer) error {
 			return fmt.Errorf("invalid format in embed code block: %s", line)
 		}
 
-		// Read the file content
 		content, err := os.ReadFile(filename)
 		if err != nil {
 			return fmt.Errorf("failed to read file %s: %v", filename, err)
@@ -124,27 +119,21 @@ func processEmbedCodeBlock(embedLines []string, output io.Writer) error {
 
 			beginIndex := strings.Index(fileContent, beginMarker)
 			if beginIndex == -1 {
-				return fmt.Errorf("beginembed marker not found in file %s", filename)
+				return fmt.Errorf("emdo marker not found in file %s", filename)
 			}
 			beginIndex += len(beginMarker)
 			endIndex := strings.Index(fileContent[beginIndex:], endMarker)
 			if endIndex == -1 {
-				return fmt.Errorf("endembed marker not found in file %s", filename)
+				return fmt.Errorf("emdone marker not found in file %s", filename)
 			}
 			endIndex += beginIndex
 			fileContent = fileContent[beginIndex:endIndex]
-
-			// Strip all leading spaces
-			fileContent = stripAllLeadingSpaces(fileContent)
 		}
 
-		// Trim leading and trailing whitespace
 		fileContent = strings.TrimSpace(fileContent)
 
-		// Include file name as a comment at the top
 		fileNameComment := buildFileNameComment(filename, commentStyle)
 
-		// Output the code block
 		fmt.Fprintf(output, "```%s\n", lang)
 		fmt.Fprintln(output, fileNameComment)
 		fmt.Fprintln(output, fileContent)
@@ -154,20 +143,11 @@ func processEmbedCodeBlock(embedLines []string, output io.Writer) error {
 	return nil
 }
 
-func stripAllLeadingSpaces(content string) string {
-	rawLines := strings.Split(content, "\n")
-	var lines []string
-
-	for _, l := range rawLines {
-		lines = append(lines, strings.TrimLeft(l, " \t"))
-	}
-	return strings.Join(lines, "\n")
-}
-
 func getCommentStyle(ext string) CommentStyle {
 	if style, ok := commentStyles[ext]; ok {
 		return style
 	}
+
 	// Default to line comment "#"
 	return CommentStyle{LineComment: "#"}
 }
@@ -175,19 +155,19 @@ func getCommentStyle(ext string) CommentStyle {
 func buildMarkers(style CommentStyle) (beginMarker, endMarker string) {
 	// Use LineComment if available
 	if style.LineComment != "" {
-		beginMarker = style.LineComment + " beginembed"
-		endMarker = style.LineComment + " endembed"
+		beginMarker = style.LineComment + " emdo"
+		endMarker = style.LineComment + " emdone"
 		return
 	}
 	// Use BlockStart and BlockEnd
 	if style.BlockStart != "" && style.BlockEnd != "" {
-		beginMarker = style.BlockStart + " beginembed " + style.BlockEnd
-		endMarker = style.BlockStart + " endembed " + style.BlockEnd
+		beginMarker = style.BlockStart + " emdo " + style.BlockEnd
+		endMarker = style.BlockStart + " emdone " + style.BlockEnd
 		return
 	}
 	// Fallback to default markers
-	beginMarker = "/* beginembed */"
-	endMarker = "/* endembed */"
+	beginMarker = "/* emdo */"
+	endMarker = "/* emdone */"
 	return
 }
 

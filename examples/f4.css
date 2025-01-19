@@ -1,13 +1,11 @@
 body {
   background-color: white;
 }
-
-/* beginembed */
+/* emdo h1 */
 h1 {
   color: blue;
 }
-/* endembed */
-
-p {
+/* emdone h1 */
+p, ul {
   font-size: 16px;
 }
