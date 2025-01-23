@@ -100,8 +100,8 @@ func processEmbed(lines []string, output io.Writer, state *ProcessState) error {
 			continue
 		}
 
-		filename := parts[0]
-		blockName := ""
+		filename := parts[0] // Required filename
+		blockName := ""      // Optional block name
 
 		if len(parts) == 2 {
 			blockName = parts[1]
@@ -115,7 +115,6 @@ func processEmbed(lines []string, output io.Writer, state *ProcessState) error {
 		}
 		fileContent := string(content)
 
-		// Process the file using processFile
 		if err := processFile(filename, blockName, fileContent, output, state); err != nil {
 			return err
 		}
@@ -130,7 +129,6 @@ func processEmbed(lines []string, output io.Writer, state *ProcessState) error {
 
 // processFile processes an individual file, handling circular embeddings
 func processFile(filename, blockName, fileContent string, output io.Writer, state *ProcessState) error {
-	// Check for circular embedding
 	if state.filesInProcess[filename] {
 		return fmt.Errorf("circular embedding detected for file %s", filename)
 	}
