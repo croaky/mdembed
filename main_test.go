@@ -21,7 +21,7 @@ func TestProcessMD(t *testing.T) {
 		t.Fatalf("os.Chdir err: %v", err)
 	}
 
-	in, err := os.ReadFile("input.md")
+	in, err := os.ReadFile("input1.md")
 	if err != nil {
 		t.Fatalf("os.ReadFile err: %v", err)
 	}

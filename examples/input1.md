@@ -28,3 +28,9 @@ f5.html h1
 f5.html ul
 f6.sql users
 ```
+
+Embed Markdown files and their embeds recursively:
+
+```embed
+input2.md
+```
