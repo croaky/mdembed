@@ -21,7 +21,7 @@ func TestProcessMD(t *testing.T) {
 		t.Fatalf("os.Chdir err: %v", err)
 	}
 
-	in, err := os.ReadFile("input.md")
+	in, err := os.ReadFile("input1.md")
 	if err != nil {
 		t.Fatalf("os.ReadFile err: %v", err)
 	}
@@ -33,7 +33,11 @@ func TestProcessMD(t *testing.T) {
 
 	var outBuf bytes.Buffer
 
-	err = processMD(bytes.NewReader(in), &outBuf)
+	state := &ProcessState{
+		filesInProcess: make(map[string]bool),
+	}
+
+	err = processMD(bytes.NewReader(in), &outBuf, state)
 	if err != nil {
 		t.Fatalf("processMD err: %v", err)
 	}
@@ -121,13 +125,18 @@ func TestProcessMD_ErrorCases(t *testing.T) {
 			}
 
 			var outBuf bytes.Buffer
-			err := processMD(strings.NewReader(tt.input), &outBuf)
+
+			state := &ProcessState{
+				filesInProcess: make(map[string]bool),
+			}
+
+			err := processMD(strings.NewReader(tt.input), &outBuf, state)
 
 			if err == nil {
 				t.Errorf("Expected error but got none")
 			} else if !strings.Contains(err.Error(), tt.wantErrMsg) {
-				t.Errorf("Expected error message to contain '%s', but got '%s'", tt.
-					wantErrMsg, err.Error())
+				t.Errorf("Expected error message to contain '%s', but got '%s'",
+					tt.wantErrMsg, err.Error())
 			}
 		})
 	}

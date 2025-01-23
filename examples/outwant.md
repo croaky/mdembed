@@ -1,4 +1,4 @@
-# Example
+# Examples
 
 Embed a whole file:
 
@@ -67,4 +67,15 @@ SELECT
   *
 FROM
   users;
+```
+
+Embed Markdown files and their embeds recursively:
+
+## Input2
+
+Embed from within an embedded Markdown file:
+
+```rb
+# f1.rb
+puts "f1.rb"
 ```
