@@ -24,6 +24,10 @@ var styles = map[string]Style{
 	".ts":   {LineComment: "//", BlockDo: "/*", BlockDone: "*/"},
 }
 
+type ProcessState struct {
+	filesInProcess map[string]bool
+}
+
 type Style struct {
 	LineComment string
 	BlockDo     string
@@ -31,14 +35,17 @@ type Style struct {
 }
 
 func main() {
-	if err := processMD(os.Stdin, os.Stdout); err != nil {
+	state := &ProcessState{
+		filesInProcess: make(map[string]bool),
+	}
+	if err := processMD(os.Stdin, os.Stdout, state); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		os.Exit(1)
 	}
 }
 
-// processMD reads Markdown from input and writes to output, processing embed
-func processMD(input io.Reader, output io.Writer) error {
+// processMD reads Markdown from input and writes to output, processing embed blocks
+func processMD(input io.Reader, output io.Writer, state *ProcessState) error {
 	scanner := bufio.NewScanner(input)
 	inEmbedBlock := false // Flag to track if we're inside an embed block
 	var lines []string    // Collects lines within an embed block
@@ -58,7 +65,7 @@ func processMD(input io.Reader, output io.Writer) error {
 		} else {
 			if line == "```" {
 				// End of an embed block
-				if err := processEmbed(lines, output); err != nil {
+				if err := processEmbed(lines, output, state); err != nil {
 					return err
 				}
 				inEmbedBlock = false
@@ -81,11 +88,7 @@ func processMD(input io.Reader, output io.Writer) error {
 }
 
 // processEmbed processes lines collected within an embed block
-func processEmbed(lines []string, output io.Writer) error {
-	if len(lines) == 0 {
-		return nil
-	}
-
+func processEmbed(lines []string, output io.Writer, state *ProcessState) error {
 	for i, line := range lines {
 		line = strings.TrimSpace(line)
 		if line == "" {
@@ -97,8 +100,8 @@ func processEmbed(lines []string, output io.Writer) error {
 			continue
 		}
 
-		filename := parts[0] // Required filename
-		blockName := ""      // Optional block name
+		filename := parts[0]
+		blockName := ""
 
 		if len(parts) == 2 {
 			blockName = parts[1]
@@ -112,80 +115,143 @@ func processEmbed(lines []string, output io.Writer) error {
 		}
 		fileContent := string(content)
 
-		// Use file type as language for code fence
-		ext := filepath.Ext(filename)
-		lang := strings.TrimPrefix(ext, ".")
-
-		// Get comment style based on file extension
-		style, ok := styles[ext]
-		if !ok {
-			return fmt.Errorf("unsupported file type: %s", ext)
+		// Process the file using processFile
+		if err := processFile(filename, blockName, fileContent, output, state); err != nil {
+			return err
 		}
-
-		// Prepare filename comment
-		var fileName string
-		if style.LineComment != "" {
-			fileName = style.LineComment + " " + filename
-		} else if style.BlockDo != "" && style.BlockDone != "" {
-			fileName = fmt.Sprintf("%s %s %s", style.BlockDo, filename, style.BlockDone)
-		}
-
-		// If a block name is specified, extract block between marks
-		if blockName != "" {
-			blockName = strings.TrimSpace(blockName)
-			var doMark, doneMark string
-
-			if style.LineComment != "" {
-				// Line comment marks
-				doMark = strings.TrimSpace(fmt.Sprintf("%s emdo %s", style.LineComment, blockName))
-				doneMark = strings.TrimSpace(fmt.Sprintf("%s emdone %s", style.LineComment, blockName))
-			} else if style.BlockDo != "" && style.BlockDone != "" {
-				// Block comment marks
-				beginContent := strings.TrimSpace(fmt.Sprintf("emdo %s", blockName))
-				endContent := strings.TrimSpace(fmt.Sprintf("emdone %s", blockName))
-
-				doMark = fmt.Sprintf("%s %s %s", style.BlockDo, beginContent, style.BlockDone)
-				doneMark = fmt.Sprintf("%s %s %s", style.BlockDo, endContent, style.BlockDone)
-			}
-
-			// Find start and end of block
-			beginIndex := strings.Index(fileContent, doMark)
-			if beginIndex == -1 {
-				return fmt.Errorf("do mark '%s' not found in file %s", doMark, filename)
-			}
-			beginIndex += len(doMark)
-
-			endIndex := strings.Index(fileContent[beginIndex:], doneMark)
-			if endIndex == -1 {
-				return fmt.Errorf("done mark '%s' not found in file %s", doneMark, filename)
-			}
-			endIndex += beginIndex
-
-			// Extract block content
-			fileContent = fileContent[beginIndex:endIndex]
-		}
-
-		// Clean up content
-		fileContent = strings.Trim(fileContent, "\n")
-		fileContent = dedent(fileContent)
-
-		// Write code block to output
-		fmt.Fprintf(output, "```%s\n", lang)
-		fmt.Fprintln(output, fileName)
-
-		// Avoid extra newlines in code block
-		fileContent = strings.TrimRight(fileContent, "\n")
-		fmt.Fprint(output, fileContent)
-		fmt.Fprintln(output) // Ensure newline before closing code fence
-		fmt.Fprintln(output, "```")
 
 		// Add newline between multiple code blocks
 		if i < len(lines)-1 {
 			fmt.Fprintln(output)
 		}
 	}
+	return nil
+}
+
+// processFile processes an individual file, handling circular embeddings
+func processFile(filename, blockName, fileContent string, output io.Writer, state *ProcessState) error {
+	// Check for circular embedding
+	if state.filesInProcess[filename] {
+		return fmt.Errorf("circular embedding detected for file %s", filename)
+	}
+
+	// Mark the file as being processed
+	state.filesInProcess[filename] = true
+	defer delete(state.filesInProcess, filename)
+
+	ext := filepath.Ext(filename)
+	if ext == ".md" {
+		// Process Markdown files recursively
+		reader := strings.NewReader(fileContent)
+		if err := processMD(reader, output, state); err != nil {
+			return fmt.Errorf("processing markdown file %s failed: %v", filename, err)
+		}
+	} else {
+		// Process other files as code blocks
+		if err := processCodeFile(filename, blockName, fileContent, output); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// processCodeFile processes non-Markdown files and embeds their content in code fences
+func processCodeFile(filename, blockName, fileContent string, output io.Writer) error {
+	ext := filepath.Ext(filename)
+	lang := strings.TrimPrefix(ext, ".")
+
+	// Get comment style based on file extension
+	style, ok := styles[ext]
+	if !ok {
+		return fmt.Errorf("unsupported file type: %s", ext)
+	}
+
+	// Prepare filename comment
+	var fileName string
+	if style.LineComment != "" {
+		fileName = style.LineComment + " " + filename
+	} else if style.BlockDo != "" && style.BlockDone != "" {
+		fileName = fmt.Sprintf("%s %s %s", style.BlockDo, filename, style.BlockDone)
+	}
+
+	// If a block name is specified, extract block between marks
+	if blockName != "" {
+		doMark, doneMark := getBlockMarkers(style, blockName)
+
+		extractedContent, err := extractBlock(fileContent, doMark, doneMark)
+		if err != nil {
+			return fmt.Errorf("%v in file %s", err, filename)
+		}
+
+		fileContent = extractedContent
+	}
+
+	// Clean up content
+	fileContent = strings.Trim(fileContent, "\n")
+	fileContent = dedent(fileContent)
+
+	// Write code block to output
+	fmt.Fprintf(output, "```%s\n", lang)
+	fmt.Fprintf(output, "%s\n", fileName)
+	fmt.Fprintf(output, "%s", fileContent)
+	fmt.Fprintf(output, "\n```\n")
 
 	return nil
+}
+
+// getBlockMarkers generates the start and end markers for a block in a file
+func getBlockMarkers(style Style, blockName string) (string, string) {
+	blockName = strings.TrimSpace(blockName)
+	var doMark, doneMark string
+
+	if style.LineComment != "" {
+		// Line comment marks
+		doMark = strings.TrimSpace(fmt.Sprintf("%s emdo %s", style.LineComment, blockName))
+		doneMark = strings.TrimSpace(fmt.Sprintf("%s emdone %s", style.LineComment, blockName))
+	} else if style.BlockDo != "" && style.BlockDone != "" {
+		// Block comment marks
+		beginContent := strings.TrimSpace(fmt.Sprintf("emdo %s", blockName))
+		endContent := strings.TrimSpace(fmt.Sprintf("emdone %s", blockName))
+
+		doMark = fmt.Sprintf("%s %s %s", style.BlockDo, beginContent, style.BlockDone)
+		doneMark = fmt.Sprintf("%s %s %s", style.BlockDo, endContent, style.BlockDone)
+	} else {
+		return "", ""
+	}
+
+	return doMark, doneMark
+}
+
+// extractBlock extracts the content between doMark and doneMark, ignoring leading and trailing whitespace
+func extractBlock(fileContent, doMark, doneMark string) (string, error) {
+	lines := strings.Split(fileContent, "\n")
+	var inBlock bool
+	var blockLines []string
+
+	for _, line := range lines {
+		trimmedLine := strings.TrimSpace(line)
+		if !inBlock {
+			if trimmedLine == doMark {
+				inBlock = true
+			}
+		} else {
+			if trimmedLine == doneMark {
+				inBlock = false
+				break
+			}
+			blockLines = append(blockLines, line)
+		}
+	}
+
+	if inBlock {
+		return "", fmt.Errorf("done mark '%s' not found", doneMark)
+	}
+
+	if len(blockLines) == 0 {
+		return "", fmt.Errorf("no content found between do mark '%s' and done mark '%s'", doMark, doneMark)
+	}
+
+	return strings.Join(blockLines, "\n"), nil
 }
 
 // dedent removes common leading whitespace from all lines

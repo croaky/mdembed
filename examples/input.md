@@ -1,4 +1,4 @@
-# Example
+# Examples
 
 Embed a whole file:
 
