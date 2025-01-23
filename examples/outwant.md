@@ -4,14 +4,14 @@ Embed a whole file:
 
 ```rb
 # f1.rb
-puts "f1.rb"
+puts "hi"
 ```
 
 Embed multiple whole files:
 
 ```rb
 # f1.rb
-puts "f1.rb"
+puts "hi"
 ```
 
 ```go
@@ -22,7 +22,7 @@ import "fmt"
 
 func main() {
 	// emdo log
-	fmt.Println("f2.go")
+	fmt.Println("hi")
 	// emdone log
 }
 ```
@@ -31,14 +31,19 @@ Embed specific lines in a file:
 
 ```js
 // f3.js
-console.log("f3.js");
+console.log("hi");
 ```
 
-Embed multiple whole files and multiple lines within files:
+Embed multiple whole files and multiple blocks within files:
 
 ```rb
 # f1.rb
-puts "f1.rb"
+puts "hi"
+```
+
+```go
+// f2.go
+fmt.Println("hi")
 ```
 
 ```css
@@ -77,5 +82,5 @@ Embed from within an embedded Markdown file:
 
 ```rb
 # f1.rb
-puts "f1.rb"
+puts "hi"
 ```

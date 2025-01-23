@@ -4,6 +4,6 @@ import "fmt"
 
 func main() {
 	// emdo log
-	fmt.Println("f2.go")
+	fmt.Println("hi")
 	// emdone log
 }

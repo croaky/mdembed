@@ -19,10 +19,11 @@ Embed specific lines in a file:
 f3.js log
 ```
 
-Embed multiple whole files and multiple lines within files:
+Embed multiple whole files and multiple blocks within files:
 
 ```embed
 f1.rb
+f2.go log
 f4.css h1
 f5.html h1
 f5.html ul

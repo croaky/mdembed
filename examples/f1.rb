@@ -1,1 +1,1 @@
-puts "f1.rb"
+puts "hi"
