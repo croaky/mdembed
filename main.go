@@ -18,7 +18,7 @@ var styles = map[string]Style{
 	".js":   {LineComment: "//", BlockDo: "/*", BlockDone: "*/"},
 	".lua":  {LineComment: "--"},
 	".rb":   {LineComment: "#"},
-	".scss": {BlockDo: "/*", BlockDone: "*/"},
+	".scss": {LineComment: "//", BlockDo: "/*", BlockDone: "*/"},
 	".sh":   {LineComment: "#"},
 	".sql":  {LineComment: "--"},
 	".ts":   {LineComment: "//", BlockDo: "/*", BlockDone: "*/"},
