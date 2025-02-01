@@ -10,18 +10,61 @@ import (
 )
 
 var styles = map[string]Style{
-	".bash": {LineComment: "#"},
-	".css":  {BlockDo: "/*", BlockDone: "*/"},
-	".go":   {LineComment: "//"},
-	".haml": {LineComment: "-#"},
-	".html": {BlockDo: "<!--", BlockDone: "-->"},
-	".js":   {LineComment: "//", BlockDo: "/*", BlockDone: "*/"},
-	".lua":  {LineComment: "--"},
-	".rb":   {LineComment: "#"},
-	".scss": {LineComment: "//", BlockDo: "/*", BlockDone: "*/"},
-	".sh":   {LineComment: "#"},
-	".sql":  {LineComment: "--"},
-	".ts":   {LineComment: "//", BlockDo: "/*", BlockDone: "*/"},
+	".ada":   {LineComment: "--"},                                   // Ada
+	".asm":   {LineComment: ";"},                                    // Assembly
+	".awk":   {LineComment: "#"},                                    // Awk
+	".bash":  {LineComment: "#"},                                    // Bash
+	".c":     {LineComment: "//", BlockDo: "/*", BlockDone: "*/"},   // C
+	".clj":   {LineComment: ";"},                                    // Clojure
+	".cob":   {LineComment: "*>"},                                   // COBOL
+	".cpp":   {LineComment: "//", BlockDo: "/*", BlockDone: "*/"},   // C++
+	".cs":    {LineComment: "//", BlockDo: "/*", BlockDone: "*/"},   // C#
+	".css":   {BlockDo: "/*", BlockDone: "*/"},                      // CSS
+	".d":     {LineComment: "//", BlockDo: "/*", BlockDone: "*/"},   // D
+	".dart":  {LineComment: "//", BlockDo: "/*", BlockDone: "*/"},   // Dart
+	".elm":   {LineComment: "--", BlockDo: "{-", BlockDone: "-}"},   // Elm
+	".erl":   {LineComment: "%"},                                    // Erlang
+	".ex":    {LineComment: "#"},                                    // Elixir
+	".f90":   {LineComment: "!"},                                    // Fortran
+	".fs":    {LineComment: "//", BlockDo: "(*", BlockDone: "*)"},   // F#
+	".gleam": {LineComment: "//"},                                   // Gleam
+	".go":    {LineComment: "//", BlockDo: "/*", BlockDone: "*/"},   // Go
+	".haml":  {LineComment: "-#"},                                   // Haml
+	".hs":    {LineComment: "--", BlockDo: "{-", BlockDone: "-}"},   // Haskell
+	".html":  {BlockDo: "<!--", BlockDone: "-->"},                   // HTML
+	".java":  {LineComment: "//", BlockDo: "/*", BlockDone: "*/"},   // Java
+	".jl":    {LineComment: "#", BlockDo: "#=", BlockDone: "=#"},    // Julia
+	".js":    {LineComment: "//", BlockDo: "/*", BlockDone: "*/"},   // JavaScript
+	".kt":    {LineComment: "//", BlockDo: "/*", BlockDone: "*/"},   // Kotlin
+	".lisp":  {LineComment: ";", BlockDo: "#|", BlockDone: "|#"},    // Lisp
+	".logo":  {LineComment: ";"},                                    // Logo
+	".lua":   {LineComment: "--", BlockDo: "--[[", BlockDone: "]]"}, // Lua
+	".m":     {LineComment: "%", BlockDo: "%{", BlockDone: "%}"},    // MATLAB
+	".ml":    {BlockDo: "(*", BlockDone: "*)"},                      // OCaml
+	".mm":    {LineComment: "//", BlockDo: "/*", BlockDone: "*/"},   // Objective-C
+	".mojo":  {LineComment: "#"},                                    // Mojo
+	".nim":   {LineComment: "#", BlockDo: "#[", BlockDone: "]#"},    // Nim
+	".pas":   {LineComment: "//", BlockDo: "{", BlockDone: "}"},     // Pascal
+	".php":   {LineComment: "//", BlockDo: "/*", BlockDone: "*/"},   // PHP
+	".pl":    {LineComment: "#"},                                    // Perl
+	".pro":   {LineComment: "%", BlockDo: "/*", BlockDone: "*/"},    // Prolog
+	".py":    {LineComment: "#"},                                    // Python
+	".r":     {LineComment: "#"},                                    // R
+	".rb":    {LineComment: "#"},                                    // Ruby
+	".rs":    {LineComment: "//", BlockDo: "/*", BlockDone: "*/"},   // Rust
+	".scala": {LineComment: "//", BlockDo: "/*", BlockDone: "*/"},   // Scala
+	".scm":   {LineComment: ";", BlockDo: "#|", BlockDone: "|#"},    // Schema
+	".scss":  {LineComment: "//", BlockDo: "/*", BlockDone: "*/"},   // Sass
+	".sh":    {LineComment: "#"},                                    // Shell
+	".sol":   {LineComment: "//", BlockDo: "/*", BlockDone: "*/"},   // Solidity
+	".sql":   {LineComment: "--", BlockDo: "/*", BlockDone: "*/"},   // SQL
+	".swift": {LineComment: "//", BlockDo: "/*", BlockDone: "*/"},   // Swift
+	".tcl":   {LineComment: "#"},                                    // Tcl
+	".ts":    {LineComment: "//", BlockDo: "/*", BlockDone: "*/"},   // TypeScript
+	".vb":    {LineComment: "'"},                                    // VBScript
+	".vbs":   {LineComment: "'"},                                    // Visual Basic
+	".wl":    {BlockDo: "(*", BlockDone: "*)"},                      // Wolfram
+	".zig":   {LineComment: "//", BlockDo: "/*", BlockDone: "*/"},   // Zig
 }
 
 type ProcessState struct {

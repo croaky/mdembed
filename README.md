@@ -1,6 +1,6 @@
 # mdembed
 
-`mdembed` is a command line tool to embed file contents in Markdown.
+`mdembed` is a command line tool to embed programming file contents in Markdown.
 
 ## Install
 
@@ -29,6 +29,7 @@ I wanted the following workflow in Vim:
 5. Open a visual split to render the LLM's response.
 
 `mdembed` handles step 3.
+
 I use [mods](https://github.com/charmbracelet/mods) for the LLM steps:
 
 ```bash
@@ -40,6 +41,8 @@ So, my Vim config runs the following Unix pipeline in a visual split:
 ```bash
 cat example.md | mdembed | mods
 ```
+
+`mdembed` supports 50+ programming languages. See `main.go` for full list.
 
 ## License
 
