@@ -64,6 +64,7 @@ var styles = map[string]Style{
 	".vb":    {LineComment: "'"},                                    // VBScript
 	".vbs":   {LineComment: "'"},                                    // Visual Basic
 	".wl":    {BlockDo: "(*", BlockDone: "*)"},                      // Wolfram
+	".yml":   {LineComment: "#"},                                    // YAML
 	".zig":   {LineComment: "//", BlockDo: "/*", BlockDone: "*/"},   // Zig
 }
 
