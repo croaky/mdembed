@@ -53,7 +53,7 @@ var styles = map[string]Style{
 	".rb":    {LineComment: "#"},                                    // Ruby
 	".rs":    {LineComment: "//", BlockDo: "/*", BlockDone: "*/"},   // Rust
 	".scala": {LineComment: "//", BlockDo: "/*", BlockDone: "*/"},   // Scala
-	".scm":   {LineComment: ";", BlockDo: "#|", BlockDone: "|#"},    // Schema
+	".scm":   {LineComment: ";", BlockDo: "#|", BlockDone: "|#"},    // Scheme
 	".scss":  {LineComment: "//", BlockDo: "/*", BlockDone: "*/"},   // Sass
 	".sh":    {LineComment: "#"},                                    // Shell
 	".sol":   {LineComment: "//", BlockDo: "/*", BlockDone: "*/"},   // Solidity
