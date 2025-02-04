@@ -35,6 +35,7 @@ var styles = map[string]Style{
 	".java":  {LineComment: "//", BlockDo: "/*", BlockDone: "*/"},   // Java
 	".jl":    {LineComment: "#", BlockDo: "#=", BlockDone: "=#"},    // Julia
 	".js":    {LineComment: "//", BlockDo: "/*", BlockDone: "*/"},   // JavaScript
+	".jsx":   {LineComment: "//", BlockDo: "/*", BlockDone: "*/"},   // JSX
 	".kt":    {LineComment: "//", BlockDo: "/*", BlockDone: "*/"},   // Kotlin
 	".lisp":  {LineComment: ";", BlockDo: "#|", BlockDone: "|#"},    // Lisp
 	".logo":  {LineComment: ";"},                                    // Logo
@@ -61,6 +62,7 @@ var styles = map[string]Style{
 	".swift": {LineComment: "//", BlockDo: "/*", BlockDone: "*/"},   // Swift
 	".tcl":   {LineComment: "#"},                                    // Tcl
 	".ts":    {LineComment: "//", BlockDo: "/*", BlockDone: "*/"},   // TypeScript
+	".tsx":   {LineComment: "//", BlockDo: "/*", BlockDone: "*/"},   // TSX
 	".vb":    {LineComment: "'"},                                    // VBScript
 	".vbs":   {LineComment: "'"},                                    // Visual Basic
 	".wl":    {BlockDo: "(*", BlockDone: "*)"},                      // Wolfram
