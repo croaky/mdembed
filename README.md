@@ -5,7 +5,7 @@
 ## Install
 
 ```sh
-go install github.com/croaky/mdembed
+go install github.com/croaky/mdembed@latest
 ```
 
 For that to work, Go must be installed and
@@ -26,27 +26,38 @@ In `input1.md`:
 Embed a whole file:
 
 ```embed
-f1.rb
+dir1/f1.rb
 ```
 
 Embed multiple whole files:
 
 ```embed
-f1.rb
-f2.go
+dir1/f1.rb
+dir1/f2.go
 ```
 
 Embed specific lines in a file:
 
 ```embed
-f3.js log
+dir1/subdir1/f3.js log
 ```
 
-Embed multiple blocks within the same file:
+Embed multiple whole files and multiple blocks within files:
 
 ```embed
-f4.html h1
-f4.html ul
+dir1/f1.rb
+dir1/f2.go log
+dir2/f4.css h1
+dir2/subdir2/f5.html h1
+dir2/subdir2/f5.html ul
+f6.sql users
+```
+
+Embed files using globs and blocks:
+
+```embed
+**/*.rb
+**/*.js log
 ```
 
 Embed Markdown files and their embeds recursively:
@@ -56,13 +67,13 @@ input2.md
 ```
 ````
 
-In `f1.rb`:
+In `dir1/f1.rb`:
 
 ```rb
 puts "hi"
 ```
 
-In `f2.go`:
+In `dir1/f2.go`:
 
 ```go
 package main
@@ -74,7 +85,7 @@ func main() {
 }
 ```
 
-In `f3.js`:
+In `dir1/subdir1/f3.js`:
 
 ```js
 console.log("Not embedded");
@@ -86,7 +97,7 @@ console.log("hi");
 console.log("Not embedded");
 ```
 
-In `f4.html`:
+In `dir2/subdir2/f5.html`:
 
 ```html
 <!doctype html>
@@ -117,7 +128,7 @@ In `input2.md`:
 Embed from within an embedded Markdown file:
 
 ```embed
-f1.rb
+dir1/f1.rb
 ```
 ````
 
@@ -135,48 +146,87 @@ The output will be:
 Embed a whole file:
 
 ```rb
-# f1.rb
+# dir1/f1.rb
 puts "hi"
 ```
 
 Embed multiple whole files:
 
 ```rb
-# f1.rb
+# dir1/f1.rb
 puts "hi"
 ```
 
 ```go
-// f2.go
+// dir1/f2.go
 package main
 
 import "fmt"
 
 func main() {
-    fmt.Println("hi")
+	// emdo log
+	fmt.Println("hi")
+	// emdone log
 }
 ```
 
 Embed specific lines in a file:
 
 ```js
-// f3.js
+// dir1/subdir1/f3.js
 console.log("hi");
 ```
 
-Embed multiple blocks within the same file:
+Embed multiple whole files and multiple blocks within files:
+
+```rb
+# dir1/f1.rb
+puts "hi"
+```
+
+```go
+// dir1/f2.go
+fmt.Println("hi")
+```
+
+```css
+/* dir2/f4.css */
+h1 {
+  color: blue;
+}
+```
 
 ```html
-<!-- f4.html -->
+<!-- dir2/subdir2/f5.html -->
 <h1>h1</h1>
 ```
 
 ```html
-<!-- f4.html -->
+<!-- dir2/subdir2/f5.html -->
 <ul>
   <li>1</li>
   <li>2</li>
 </ul>
+```
+
+```sql
+-- f6.sql
+SELECT
+  *
+FROM
+  users;
+```
+
+Embed files using globs and blocks:
+
+```rb
+# dir1/f1.rb
+puts "hi"
+```
+
+```js
+// dir1/subdir1/f3.js
+console.log("hi");
 ```
 
 Embed Markdown files and their embeds recursively:
@@ -186,7 +236,7 @@ Embed Markdown files and their embeds recursively:
 Embed from within an embedded Markdown file:
 
 ```rb
-# f1.rb
+# dir1/f1.rb
 puts "hi"
 ```
 ````
@@ -196,6 +246,8 @@ puts "hi"
 `mdembed` embeds code blocks in the output Markdown,
 removing surrounding whitespace.
 The file extension is used as the code fence attribute.
+
+It parses exact file paths or file glob patterns.
 
 If `emdo` and `emdone` magic comments were used, it will only embed the code
 block wrapped by the magic comments.

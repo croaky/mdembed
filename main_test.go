@@ -77,7 +77,7 @@ func TestProcessMD_ErrorCases(t *testing.T) {
 		{
 			name:       "File not found",
 			input:      "Some text before.\n\n```embed\nnonexistent.go\n```\n",
-			wantErrMsg: "failed to read file nonexistent.go",
+			wantErrMsg: "no files match pattern nonexistent.go",
 		},
 		{
 			name:  "Unsupported file type",
