@@ -3,19 +3,19 @@
 Embed a whole file:
 
 ```rb
-# f1.rb
+# dir1/f1.rb
 puts "hi"
 ```
 
 Embed multiple whole files:
 
 ```rb
-# f1.rb
+# dir1/f1.rb
 puts "hi"
 ```
 
 ```go
-// f2.go
+// dir1/f2.go
 package main
 
 import "fmt"
@@ -30,36 +30,36 @@ func main() {
 Embed specific lines in a file:
 
 ```js
-// f3.js
+// dir1/subdir1/f3.js
 console.log("hi");
 ```
 
 Embed multiple whole files and multiple blocks within files:
 
 ```rb
-# f1.rb
+# dir1/f1.rb
 puts "hi"
 ```
 
 ```go
-// f2.go
+// dir1/f2.go
 fmt.Println("hi")
 ```
 
 ```css
-/* f4.css */
+/* dir2/f4.css */
 h1 {
   color: blue;
 }
 ```
 
 ```html
-<!-- f5.html -->
+<!-- dir2/subdir2/f5.html -->
 <h1>h1</h1>
 ```
 
 ```html
-<!-- f5.html -->
+<!-- dir2/subdir2/f5.html -->
 <ul>
   <li>1</li>
   <li>2</li>
@@ -74,6 +74,18 @@ FROM
   users;
 ```
 
+Embed files using globs and blocks:
+
+```rb
+# dir1/f1.rb
+puts "hi"
+```
+
+```js
+// dir1/subdir1/f3.js
+console.log("hi");
+```
+
 Embed Markdown files and their embeds recursively:
 
 ## Input2
@@ -81,6 +93,6 @@ Embed Markdown files and their embeds recursively:
 Embed from within an embedded Markdown file:
 
 ```rb
-# f1.rb
+# dir1/f1.rb
 puts "hi"
 ```

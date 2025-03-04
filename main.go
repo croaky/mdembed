@@ -4,9 +4,13 @@ import (
 	"bufio"
 	"fmt"
 	"io"
+	"io/fs"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
+
+	"github.com/bmatcuk/doublestar/v4"
 )
 
 var styles = map[string]Style{
@@ -146,8 +150,8 @@ func processEmbed(lines []string, output io.Writer, state *ProcessState) error {
 			continue
 		}
 
-		filename := parts[0] // Required filename
-		blockName := ""      // Optional block name
+		pattern := parts[0] // Can be a filename or a glob pattern
+		blockName := ""     // Optional block name
 
 		if len(parts) == 2 {
 			blockName = parts[1]
@@ -155,17 +159,48 @@ func processEmbed(lines []string, output io.Writer, state *ProcessState) error {
 			return fmt.Errorf("invalid format in embed code block: %s", line)
 		}
 
-		content, err := os.ReadFile(filename)
+		// ensure pattern uses forward slashes
+		pattern = filepath.ToSlash(pattern)
+		// clean up the pattern to remove any ./ or ../
+		pattern = path.Clean(pattern)
+
+		// use doublestar.Glob with fs.FS
+		fsys := os.DirFS(".")
+
+		// support recursive glob patterns using the new doublestar v4 API
+		matches, err := doublestar.Glob(fsys, pattern)
 		if err != nil {
-			return fmt.Errorf("failed to read file %s: %v", filename, err)
-		}
-		fileContent := string(content)
-
-		if err := processFile(filename, blockName, fileContent, output, state); err != nil {
-			return err
+			return fmt.Errorf("failed to glob pattern %s: %v", pattern, err)
 		}
 
-		// Add newline between multiple code blocks
+		if len(matches) == 0 {
+			return fmt.Errorf("no files match pattern %s", pattern)
+		}
+
+		for j, match := range matches {
+			filename := match // relative to fs.FS root
+
+			// Read the file content from fsys
+			content, err := fs.ReadFile(fsys, filename)
+			if err != nil {
+				return fmt.Errorf("failed to read file %s: %v", filename, err)
+			}
+			fileContent := string(content)
+
+			// Adjust filename to include OS-specific path separators for display
+			displayFilename := filepath.FromSlash(filename)
+
+			if err := processFile(displayFilename, blockName, fileContent, output, state); err != nil {
+				return err
+			}
+
+			// Add newline between multiple code blocks
+			if j < len(matches)-1 {
+				fmt.Fprintln(output)
+			}
+		}
+
+		// Add newline between multiple patterns
 		if i < len(lines)-1 {
 			fmt.Fprintln(output)
 		}
