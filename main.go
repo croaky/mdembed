@@ -24,6 +24,7 @@ var styles = map[string]Style{
 	".cpp":   {LineComment: "//", BlockDo: "/*", BlockDone: "*/"},   // C++
 	".cs":    {LineComment: "//", BlockDo: "/*", BlockDone: "*/"},   // C#
 	".css":   {BlockDo: "/*", BlockDone: "*/"},                      // CSS
+	".csv":   {NoComment: true},                                     // CSV
 	".d":     {LineComment: "//", BlockDo: "/*", BlockDone: "*/"},   // D
 	".dart":  {LineComment: "//", BlockDo: "/*", BlockDone: "*/"},   // Dart
 	".elm":   {LineComment: "--", BlockDo: "{-", BlockDone: "-}"},   // Elm
@@ -39,6 +40,7 @@ var styles = map[string]Style{
 	".java":  {LineComment: "//", BlockDo: "/*", BlockDone: "*/"},   // Java
 	".jl":    {LineComment: "#", BlockDo: "#=", BlockDone: "=#"},    // Julia
 	".js":    {LineComment: "//", BlockDo: "/*", BlockDone: "*/"},   // JavaScript
+	".json":  {NoComment: true},                                     // JSON
 	".jsx":   {LineComment: "//", BlockDo: "/*", BlockDone: "*/"},   // JSX
 	".kt":    {LineComment: "//", BlockDo: "/*", BlockDone: "*/"},   // Kotlin
 	".lisp":  {LineComment: ";", BlockDo: "#|", BlockDone: "|#"},    // Lisp
@@ -82,6 +84,7 @@ type Style struct {
 	LineComment string
 	BlockDo     string
 	BlockDone   string
+	NoComment   bool
 }
 
 func main() {
@@ -251,6 +254,14 @@ func processCodeFile(filename, blockName, fileContent string, output io.Writer) 
 		fileName = style.LineComment + " " + filename
 	} else if style.BlockDo != "" && style.BlockDone != "" {
 		fileName = fmt.Sprintf("%s %s %s", style.BlockDo, filename, style.BlockDone)
+	} else {
+		// For file types without comments (like JSON), just use the filename
+		fileName = filename
+	}
+
+	// If a block name is specified and the file doesn't support comments, return an error
+	if blockName != "" && style.NoComment {
+		return fmt.Errorf("block embedding is not supported for files that do not support comments, such as %s", filename)
 	}
 
 	// If a block name is specified, extract block between marks
@@ -295,6 +306,7 @@ func getBlockMarkers(style Style, blockName string) (string, string) {
 		doMark = fmt.Sprintf("%s %s %s", style.BlockDo, beginContent, style.BlockDone)
 		doneMark = fmt.Sprintf("%s %s %s", style.BlockDo, endContent, style.BlockDone)
 	} else {
+		// For files without comments, return empty markers
 		return "", ""
 	}
 
