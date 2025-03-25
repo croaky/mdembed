@@ -253,11 +253,11 @@ If `emdo` and `emdone` magic comments were used, it will only embed the code
 block wrapped by the magic comments.
 
 It is aware of code comment styles for Ada, Assembly, Awk, Bash, C, Clojure,
-COBOL, C++, C#, CSS, D, Dart, Elm, Erlang, Elixir, Fortran, F#, Gleam, Go, Haml,
-Haskell, HTML, Java, Julia, JavaScript, JSX, Kotlin, Lisp, Logo, Lua, MATLAB,
-OCaml, Objective-C, Mojo, Nim, Pascal, PHP, Perl, Prolog, Python, R, Ruby, Rust,
-Scala, Scheme, Sass, Shell, Solidity, SQL, Swift, Tcl, TypeScript, TSX,
-VBScript, Visual Basic, Wolfram, YAML, and Zig.
+COBOL, C++, C#, CSS, CSV, D, Dart, Elm, Erlang, Elixir, Fortran, F#, Gleam, Go,
+Haml, Haskell, HTML, Java, Julia, JavaScript, JSON, JSX, Kotlin, Lisp, Logo,
+Lua, MATLAB, OCaml, Objective-C, Mojo, Nim, Pascal, PHP, Perl, Prolog, Python,
+R, Ruby, Rust, Scala, Scheme, Sass, Shell, Solidity, SQL, Swift, Tcl,
+TypeScript, TSX, VBScript, Visual Basic, Wolfram, YAML, and Zig.
 
 If you reference another Markdown file, `mdembed` will embed its contents
 directly, recursively embedding its code blocks.
