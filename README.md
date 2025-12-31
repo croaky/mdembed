@@ -285,6 +285,19 @@ So, my Vim config runs the following Unix pipeline in a vertical split:
 cat example.md | mdembed | mods
 ```
 
+## Developing
+
+```bash
+# checks
+goimports -local "$(go list -m)" -w .
+go test ./...
+go vet ./...
+
+# commit
+git add -A
+git commit -m "lang: support Ruby" # commit with prefix, imperative mood, hard-wrap 72 cols
+```
+
 ## License
 
 MIT
