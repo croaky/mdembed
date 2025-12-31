@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -60,8 +61,8 @@ func TestProcessMD_ErrorCases(t *testing.T) {
 	tests := []struct {
 		name       string
 		input      string
-		setup      func()
-		teardown   func()
+		file       string
+		fileData   []byte
 		wantErrMsg string
 	}{
 		{
@@ -80,48 +81,40 @@ func TestProcessMD_ErrorCases(t *testing.T) {
 			wantErrMsg: "no files match pattern nonexistent.go",
 		},
 		{
-			name:  "Unsupported file type",
-			input: "Some text before.\n\n```embed\nfile.unknown\n```\n",
-			setup: func() {
-				os.WriteFile("file.unknown", []byte("// content"), 0644)
-			},
-			teardown: func() {
-				os.Remove("file.unknown")
-			},
+			name:       "Unsupported file type",
+			input:      "Some text before.\n\n```embed\nfile.unknown\n```\n",
+			file:       "file.unknown",
+			fileData:   []byte("// content"),
 			wantErrMsg: "unsupported file type: .unknown",
 		},
 		{
-			name:  "Do mark not found",
-			input: "Some text before.\n\n```embed\nfile.go block1\n```\n",
-			setup: func() {
-				os.WriteFile("file.go", []byte(`// This is a test file`), 0644)
-			},
-			teardown: func() {
-				os.Remove("file.go")
-			},
+			name:       "Do mark not found",
+			input:      "Some text before.\n\n```embed\nfile.go block1\n```\n",
+			file:       "file.go",
+			fileData:   []byte(`// This is a test file`),
 			wantErrMsg: "do mark",
 		},
 		{
 			name:  "Done mark not found",
 			input: "Some text before.\n\n```embed\nfile.go block2\n```\n",
-			setup: func() {
-				os.WriteFile("file.go", []byte(`// emdo block2                                
-    // Code block content`), 0644)
-			},
-			teardown: func() {
-				os.Remove("file.go")
-			},
+			file:  "file.go",
+			fileData: []byte(`// emdo block2
+    // Code block content`),
 			wantErrMsg: "done mark",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if tt.setup != nil {
-				tt.setup()
+			dir := t.TempDir()
+			if err := os.Chdir(dir); err != nil {
+				t.Fatal(err)
 			}
-			if tt.teardown != nil {
-				defer tt.teardown()
+
+			if tt.file != "" {
+				if err := os.WriteFile(filepath.Join(dir, tt.file), tt.fileData, 0644); err != nil {
+					t.Fatal(err)
+				}
 			}
 
 			var outBuf bytes.Buffer
