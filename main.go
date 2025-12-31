@@ -190,12 +190,9 @@ func processEmbed(lines []string, output io.Writer, state *ProcessState) error {
 			}
 			fileContent := string(content)
 
-			// Adjust filename to include OS-specific path separators for display
-			displayFilename := filepath.FromSlash(filename)
-
-			if err := processFile(displayFilename, blockName, fileContent, output, state); err != nil {
-				return err
-			}
+		if err := processFile(filename, blockName, fileContent, output, state); err != nil {
+			return err
+		}
 
 			// Add newline between multiple code blocks
 			if j < len(matches)-1 {
@@ -248,15 +245,15 @@ func processCodeFile(filename, blockName, fileContent string, output io.Writer) 
 		return fmt.Errorf("unsupported file type: %s", ext)
 	}
 
-	// Prepare filename comment
-	var fileName string
+	// Prepare header comment with filename
+	var headerComment string
 	if style.LineComment != "" {
-		fileName = style.LineComment + " " + filename
+		headerComment = style.LineComment + " " + filename
 	} else if style.BlockDo != "" && style.BlockDone != "" {
-		fileName = fmt.Sprintf("%s %s %s", style.BlockDo, filename, style.BlockDone)
+		headerComment = fmt.Sprintf("%s %s %s", style.BlockDo, filename, style.BlockDone)
 	} else {
 		// For file types without comments (like JSON), just use the filename
-		fileName = filename
+		headerComment = filename
 	}
 
 	// If a block name is specified and the file doesn't support comments, return an error
@@ -282,7 +279,7 @@ func processCodeFile(filename, blockName, fileContent string, output io.Writer) 
 
 	// Write code block to output
 	fmt.Fprintf(output, "```%s\n", lang)
-	fmt.Fprintf(output, "%s\n", fileName)
+	fmt.Fprintf(output, "%s\n", headerComment)
 	fmt.Fprintf(output, "%s", fileContent)
 	fmt.Fprintf(output, "\n```\n")
 

@@ -249,8 +249,8 @@ The file extension is used as the code fence attribute.
 
 It parses exact file paths or file glob patterns.
 
-If `emdo` and `emdone` magic comments were used, it will only embed the code
-block wrapped by the magic comments.
+If `emdo <name>` and `emdone <name>` block markers are used in a source file,
+you can embed only that named block by specifying the block name after the file path.
 
 It is aware of code comment styles for Ada, Assembly, Awk, Bash, C, Clojure,
 COBOL, C++, C#, CSS, CSV, D, Dart, Elm, Erlang, Elixir, Fortran, F#, Gleam, Go,
