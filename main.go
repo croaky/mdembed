@@ -190,9 +190,9 @@ func processEmbed(lines []string, output io.Writer, state *ProcessState) error {
 			}
 			fileContent := string(content)
 
-		if err := processFile(filename, blockName, fileContent, output, state); err != nil {
-			return err
-		}
+			if err := processFile(filename, blockName, fileContent, output, state); err != nil {
+				return err
+			}
 
 			// Add newline between multiple code blocks
 			if j < len(matches)-1 {
