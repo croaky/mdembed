@@ -292,6 +292,7 @@ cat example.md | mdembed | mods
 goimports -local "$(go list -m)" -w .
 go test ./...
 go vet ./...
+deadcode .
 
 # commit
 git add -A
