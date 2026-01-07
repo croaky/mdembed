@@ -290,8 +290,8 @@ cat example.md | mdembed | mods
 ```bash
 # checks
 goimports -local "$(go list -m)" -w .
-go test ./...
 go vet ./...
+go test ./...
 deadcode .
 
 # commit
