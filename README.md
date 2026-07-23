@@ -100,7 +100,7 @@ console.log("Not embedded");
 In `dir2/subdir2/f5.html`:
 
 ```html
-<!doctype html>
+<!DOCTYPE html>
 <html>
   <head>
     <title>Not embedded</title>
@@ -292,6 +292,7 @@ cat example.md | mdembed | mods
 git config core.hooksPath bin
 
 # checks
+dprint fmt
 goimports -local "$(go list -m)" -w .
 go vet ./...
 go test ./...
