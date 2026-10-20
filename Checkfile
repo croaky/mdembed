@@ -1,3 +1,20 @@
+# -trimpath and -buildvcs=false keep a test binary a function of its
+# source alone, so a result cached by one runner slot counts for all.
+test: go test -trimpath -buildvcs=false -race -cover ./...
+
+# goimports -l lists what it would rewrite, and a non-empty list is the
+# failure. go run at a pinned version: the runner installs no goimports.
+lint: out=$(go run golang.org/x/tools/cmd/goimports@v0.45.0 -local "$(go list -m)" -l .); if [ -n "$out" ]; then echo "$out"; exit 1; fi; go vet ./...
+
+# gopls at hint severity exits 0 whatever it found, so awk prints what
+# it read, then fails if it read a line.
+hints: git ls-files -z '*.go' | xargs -0 gopls check -severity=hint | awk '1; END { exit (NR > 0) }'
+
+# deadcode exits 0 whatever it found, so awk prints what it read, then
+# fails if it read a line. The first go run builds deadcode and
+# discards its output, so cold-cache download lines do not count.
+deadcode: go run golang.org/x/tools/cmd/deadcode@v0.45.0 -h >/dev/null 2>&1; go run golang.org/x/tools/cmd/deadcode@v0.45.0 -test ./... 2>&1 | awk '1; END { exit (NR > 0) }'
+
 # The title a change needs to merge, and the body rules that come
 # with it. sockeye reads this from main at merge.
 merge: ^[a-z][a-z0-9_/-]*(?:, ?[a-z][a-z0-9_/-]*)*: [a-z](?:.{2,62})?(?:[^.\s]|\.\.\.)$

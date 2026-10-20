@@ -288,9 +288,6 @@ cat example.md | mdembed | mods
 ## Developing
 
 ```bash
-# setup (one time after clone)
-git config core.hooksPath bin
-
 # checks
 dprint fmt
 goimports -local "$(go list -m)" -w .
