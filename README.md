@@ -5,7 +5,7 @@
 ## Install
 
 ```sh
-go install github.com/croaky/mdembed@latest
+go install github.com/croaky/mdembed@main
 ```
 
 For that to work, Go must be installed and
