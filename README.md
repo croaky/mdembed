@@ -262,6 +262,16 @@ TypeScript, TSX, VBScript, Visual Basic, Wolfram, YAML, and Zig.
 If you reference another Markdown file, `mdembed` will embed its contents
 directly, recursively embedding its code blocks.
 
+The code fence is one backtick longer than the longest backtick run in the
+embedded file, with a minimum of three backticks. Thus, a fence line in the
+file does not close the code block.
+
+`mdembed` reads only regular files in the working directory.
+It refuses a symlink and a file name that holds a control character.
+A glob does not descend through a directory symlink.
+A run stops with an error when it embeds more than 10,000 files
+or reads more than 64 MiB from them.
+
 ## So what?
 
 I wanted the following workflow in Vim:

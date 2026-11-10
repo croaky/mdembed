@@ -4,11 +4,11 @@ import (
 	"bufio"
 	"fmt"
 	"io"
-	"io/fs"
 	"os"
 	"path"
 	"path/filepath"
 	"strings"
+	"unicode"
 
 	"github.com/bmatcuk/doublestar/v4"
 )
@@ -76,8 +76,19 @@ var styles = map[string]Style{
 	".zig":   {LineComment: "//", BlockDo: "/*", BlockDone: "*/"},   // Zig
 }
 
+// A run stops with an error when it embeds more than maxEmbedFiles
+// files or reads more than maxEmbedBytes bytes from them. Markdown
+// files that embed other Markdown files more than one time can
+// otherwise make a small input expand without limit.
+const (
+	maxEmbedFiles = 10000
+	maxEmbedBytes = 64 << 20
+)
+
 type ProcessState struct {
 	filesInProcess map[string]bool
+	filesEmbedded  int
+	bytesEmbedded  int
 }
 
 type Style struct {
@@ -167,37 +178,8 @@ func processEmbed(lines []string, output io.Writer, state *ProcessState) error {
 		// clean up the pattern to remove any ./ or ../
 		pattern = path.Clean(pattern)
 
-		// use doublestar.Glob with fs.FS
-		fsys := os.DirFS(".")
-
-		// support recursive glob patterns using the new doublestar v4 API
-		matches, err := doublestar.Glob(fsys, pattern)
-		if err != nil {
-			return fmt.Errorf("failed to glob pattern %s: %v", pattern, err)
-		}
-
-		if len(matches) == 0 {
-			return fmt.Errorf("no files match pattern %s", pattern)
-		}
-
-		for j, match := range matches {
-			filename := match // relative to fs.FS root
-
-			// Read the file content from fsys
-			content, err := fs.ReadFile(fsys, filename)
-			if err != nil {
-				return fmt.Errorf("failed to read file %s: %v", filename, err)
-			}
-			fileContent := string(content)
-
-			if err := processFile(filename, blockName, fileContent, output, state); err != nil {
-				return err
-			}
-
-			// Add newline between multiple code blocks
-			if j < len(matches)-1 {
-				fmt.Fprintln(output)
-			}
+		if err := embedPattern(pattern, blockName, output, state); err != nil {
+			return err
 		}
 
 		// Add newline between multiple patterns
@@ -206,6 +188,86 @@ func processEmbed(lines []string, output io.Writer, state *ProcessState) error {
 		}
 	}
 	return nil
+}
+
+// embedPattern embeds each file that matches pattern in the working
+// directory. An os.Root holds each access in the working directory, so
+// a symlink cannot move a read outside it. The glob does not descend
+// through a directory symlink.
+func embedPattern(pattern, blockName string, output io.Writer, state *ProcessState) error {
+	root, err := os.OpenRoot(".")
+	if err != nil {
+		return err
+	}
+	defer root.Close()
+
+	matches, err := doublestar.Glob(root.FS(), pattern, doublestar.WithNoFollow())
+	if err != nil {
+		return fmt.Errorf("failed to glob pattern %s: %v", pattern, err)
+	}
+
+	if len(matches) == 0 {
+		return fmt.Errorf("no files match pattern %s", pattern)
+	}
+
+	for j, filename := range matches {
+		if strings.IndexFunc(filename, unicode.IsControl) >= 0 {
+			return fmt.Errorf("file name %q holds a control character", filename)
+		}
+
+		state.filesEmbedded++
+		if state.filesEmbedded > maxEmbedFiles {
+			return fmt.Errorf("embed limit of %d files reached at %s", maxEmbedFiles, filename)
+		}
+
+		content, err := readEmbed(root, filename, state)
+		if err != nil {
+			return err
+		}
+
+		if err := processFile(filename, blockName, string(content), output, state); err != nil {
+			return err
+		}
+
+		// Add newline between multiple code blocks
+		if j < len(matches)-1 {
+			fmt.Fprintln(output)
+		}
+	}
+	return nil
+}
+
+// readEmbed reads a regular file in root. It refuses a symlink, a
+// directory, or a device, and it reads no more bytes than the run has
+// left of maxEmbedBytes.
+func readEmbed(root *os.Root, filename string, state *ProcessState) ([]byte, error) {
+	info, err := root.Lstat(filename)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read file %s: %v", filename, err)
+	}
+	if !info.Mode().IsRegular() {
+		return nil, fmt.Errorf("%s is not a regular file", filename)
+	}
+
+	f, err := root.Open(filename)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read file %s: %v", filename, err)
+	}
+	defer f.Close()
+	if info, err := f.Stat(); err != nil || !info.Mode().IsRegular() {
+		return nil, fmt.Errorf("%s is not a regular file", filename)
+	}
+
+	left := maxEmbedBytes - state.bytesEmbedded
+	content, err := io.ReadAll(io.LimitReader(f, int64(left)+1))
+	if err != nil {
+		return nil, fmt.Errorf("failed to read file %s: %v", filename, err)
+	}
+	if len(content) > left {
+		return nil, fmt.Errorf("embed limit of %d bytes reached at %s", maxEmbedBytes, filename)
+	}
+	state.bytesEmbedded += len(content)
+	return content, nil
 }
 
 // processFile processes an individual file, handling circular embeddings
@@ -277,13 +339,30 @@ func processCodeFile(filename, blockName, fileContent string, output io.Writer) 
 	fileContent = strings.Trim(fileContent, "\n")
 	fileContent = dedent(fileContent)
 
-	// Write code block to output
-	fmt.Fprintf(output, "```%s\n", lang)
+	// Write code block to output. The fence is longer than each
+	// backtick run in the block, so no line in it can close the fence.
+	fence := strings.Repeat("`", max(3, longestBacktickRun(headerComment+"\n"+fileContent)+1))
+	fmt.Fprintf(output, "%s%s\n", fence, lang)
 	fmt.Fprintf(output, "%s\n", headerComment)
 	fmt.Fprintf(output, "%s", fileContent)
-	fmt.Fprintf(output, "\n```\n")
+	fmt.Fprintf(output, "\n%s\n", fence)
 
 	return nil
+}
+
+// longestBacktickRun returns the length of the longest run of
+// backticks in s.
+func longestBacktickRun(s string) int {
+	longest, run := 0, 0
+	for i := 0; i < len(s); i++ {
+		if s[i] == '`' {
+			run++
+			longest = max(longest, run)
+		} else {
+			run = 0
+		}
+	}
+	return longest
 }
 
 // getBlockMarkers generates the start and end markers for a block in a file
