@@ -231,6 +231,44 @@ func TestEmbedGlobSkipsDirectorySymlinks(t *testing.T) {
 	}
 }
 
+func TestEmbedRefusesFileInDirectorySymlink(t *testing.T) {
+	for _, input := range []string{"alias/a.yml", "alias/*.yml"} {
+		t.Run(input, func(t *testing.T) {
+			dir := t.TempDir()
+			if err := os.Mkdir(filepath.Join(dir, "real"), 0755); err != nil {
+				t.Fatal(err)
+			}
+			if err := os.WriteFile(filepath.Join(dir, "real", "a.yml"), []byte("a: 1"), 0644); err != nil {
+				t.Fatal(err)
+			}
+			if err := os.Symlink("real", filepath.Join(dir, "alias")); err != nil {
+				t.Fatal(err)
+			}
+			t.Chdir(dir)
+			var out bytes.Buffer
+			err := processMD(strings.NewReader("```embed\n"+input+"\n```\n"), &out, &ProcessState{
+				filesInProcess: make(map[string]bool),
+			})
+			if err == nil || !strings.Contains(err.Error(), "directory symlink") {
+				t.Errorf("got error %v, want a directory symlink error", err)
+			}
+		})
+	}
+}
+
+func TestEmbedRefusesBraces(t *testing.T) {
+	// With no limit, the glob expands 40 groups of 2 to 2^40 patterns.
+	pattern := strings.Repeat("{a,b}", 40) + ".sh"
+	start := time.Now()
+	_, err := embedIn(t, map[string]string{"a.sh": "echo hi"}, "```embed\n"+pattern+"\n```\n")
+	if err == nil || !strings.Contains(err.Error(), "brace") {
+		t.Errorf("got error %v, want a brace error", err)
+	}
+	if d := time.Since(start); d > time.Second {
+		t.Errorf("brace pattern ran for %v, want less than 1s", d)
+	}
+}
+
 func TestEmbedNestedMarkdownLimit(t *testing.T) {
 	// Each file embeds the next file two times, so a run with no limit
 	// writes the leaf 2^40 times.

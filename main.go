@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"io"
+	"io/fs"
 	"os"
 	"path"
 	"path/filepath"
@@ -193,8 +194,13 @@ func processEmbed(lines []string, output io.Writer, state *ProcessState) error {
 // embedPattern embeds each file that matches pattern in the working
 // directory. An os.Root holds each access in the working directory, so
 // a symlink cannot move a read outside it. The glob does not descend
-// through a directory symlink.
+// through a directory symlink. embedPattern refuses a brace, because
+// the glob expands n brace groups to k^n patterns before it matches.
 func embedPattern(pattern, blockName string, output io.Writer, state *ProcessState) error {
+	if strings.ContainsRune(pattern, '{') {
+		return fmt.Errorf("pattern %s holds a brace, which mdembed does not support", pattern)
+	}
+
 	root, err := os.OpenRoot(".")
 	if err != nil {
 		return err
@@ -239,8 +245,19 @@ func embedPattern(pattern, blockName string, output io.Writer, state *ProcessSta
 
 // readEmbed reads a regular file in root. It refuses a symlink, a
 // directory, or a device, and it reads no more bytes than the run has
-// left of maxEmbedBytes.
+// left of maxEmbedBytes. It also refuses a file in a directory symlink,
+// so each file has one name.
 func readEmbed(root *os.Root, filename string, state *ProcessState) ([]byte, error) {
+	for dir := path.Dir(filename); dir != "." && dir != "/"; dir = path.Dir(dir) {
+		info, err := root.Lstat(dir)
+		if err != nil {
+			return nil, fmt.Errorf("failed to read file %s: %v", filename, err)
+		}
+		if info.Mode()&fs.ModeSymlink != 0 {
+			return nil, fmt.Errorf("%s is in a directory symlink %s", filename, dir)
+		}
+	}
+
 	info, err := root.Lstat(filename)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read file %s: %v", filename, err)

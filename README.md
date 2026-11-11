@@ -267,8 +267,10 @@ embedded file, with a minimum of three backticks. Thus, a fence line in the
 file does not close the code block.
 
 `mdembed` reads only regular files in the working directory.
-It refuses a symlink and a file name that holds a control character.
+It refuses a symlink, a file in a directory symlink,
+and a file name that holds a control character.
 A glob does not descend through a directory symlink.
+It refuses a pattern that holds a brace (`{`).
 A run stops with an error when it embeds more than 10,000 files
 or reads more than 64 MiB from them.
 
