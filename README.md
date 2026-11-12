@@ -270,7 +270,8 @@ file does not close the code block.
 It refuses a symlink, a file in a directory symlink,
 and a file name that holds a control character.
 A glob does not descend through a directory symlink.
-It refuses a pattern that holds a brace (`{`).
+It refuses a pattern that holds a brace (`{`)
+or more than one `**` segment.
 A run stops with an error when it embeds more than 10,000 files
 or reads more than 64 MiB from them.
 

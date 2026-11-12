@@ -196,9 +196,21 @@ func processEmbed(lines []string, output io.Writer, state *ProcessState) error {
 // a symlink cannot move a read outside it. The glob does not descend
 // through a directory symlink. embedPattern refuses a brace, because
 // the glob expands n brace groups to k^n patterns before it matches.
+// It also refuses more than one "**" segment. The glob walks the tree
+// one time for each split of a path between the "**" segments, and it
+// returns one match for each split.
 func embedPattern(pattern, blockName string, output io.Writer, state *ProcessState) error {
 	if strings.ContainsRune(pattern, '{') {
 		return fmt.Errorf("pattern %s holds a brace, which mdembed does not support", pattern)
+	}
+	doubleStars := 0
+	for seg := range strings.SplitSeq(pattern, "/") {
+		if seg == "**" {
+			doubleStars++
+		}
+	}
+	if doubleStars > 1 {
+		return fmt.Errorf("pattern %s holds more than one ** segment, which mdembed does not support", pattern)
 	}
 
 	root, err := os.OpenRoot(".")

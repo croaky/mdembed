@@ -269,6 +269,55 @@ func TestEmbedRefusesBraces(t *testing.T) {
 	}
 }
 
+func TestEmbedRefusesManyDoubleStars(t *testing.T) {
+	// With no limit, the glob walks the tree C(depth+k, k) times and
+	// returns x.go one time for each walk.
+	pattern := strings.Repeat("**/", 200) + "x.go"
+	files := map[string]string{
+		"a/b/c/d/e/x.go": "package x",
+		"a/b/nested.md":  "```embed\n" + pattern + "\n```\n",
+	}
+	tests := []struct {
+		name  string
+		input string
+	}{
+		{"stdin", "```embed\n" + pattern + "\n```\n"},
+		{"nested Markdown", "```embed\n**/*.md\n```\n"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			start := time.Now()
+			_, err := embedIn(t, files, tt.input)
+			if err == nil || !strings.Contains(err.Error(), "more than one **") {
+				t.Errorf("got error %v, want a ** error", err)
+			}
+			if d := time.Since(start); d > time.Second {
+				t.Errorf("** pattern ran for %v, want less than 1s", d)
+			}
+		})
+	}
+}
+
+func TestEmbedDoubleStarMatchesEachFileOnce(t *testing.T) {
+	files := map[string]string{}
+	for _, d := range []string{"a", "a/b", "a/b/c"} {
+		files[d+"/x.go"] = "package x"
+	}
+	for _, pattern := range []string{"**/x.go", "*/**/x.go", "**/*/x.go"} {
+		t.Run(pattern, func(t *testing.T) {
+			got, err := embedIn(t, files, "```embed\n"+pattern+"\n```\n")
+			if err != nil {
+				t.Fatalf("processMD err: %v", err)
+			}
+			for name := range files {
+				if n := strings.Count(got, "// "+name+"\n"); n != 1 {
+					t.Errorf("output holds %s %d times, want 1:\n%s", name, n, got)
+				}
+			}
+		})
+	}
+}
+
 func TestEmbedNestedMarkdownLimit(t *testing.T) {
 	// Each file embeds the next file two times, so a run with no limit
 	// writes the leaf 2^40 times.
